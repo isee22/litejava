@@ -1,7 +1,0 @@
-# JdbcPlugin 测试配置
-db:
-  url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
-  username: sa
-  password: 
-  pool:
-    maxSize: 5
