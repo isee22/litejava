@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - LiteJava'">LiteJava</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* 导航 */
+        nav { background: #2c3e50; padding: 1rem 0; }
+        nav .container { display: flex; justify-content: space-between; align-items: center; }
+        nav a { color: #fff; text-decoration: none; margin-left: 20px; }
+        nav a:hover { color: #3498db; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #fff !important; margin-left: 0 !important; }
+        
+        /* 主内容 */
+        main { padding: 2rem 0; min-height: calc(100vh - 140px); }
+        
+        /* 页脚 */
+        footer { background: #34495e; color: #fff; padding: 1rem 0; text-align: center; }
+        
+        /* 按钮 */
+        .btn { display: inline-block; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 14px; }
+        .btn-primary { background: #3498db; color: #fff; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .btn-success { background: #27ae60; color: #fff; }
+        .btn:hover { opacity: 0.9; }
+        
+        /* 表格 */
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f5f5f5; }
+        tr:hover { background: #f9f9f9; }
+        
+        /* 表单 */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus { outline: none; border-color: #3498db; }
+        
+        /* 卡片 */
+        .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px; }
+        .card-title { font-size: 1.25rem; margin-bottom: 10px; }
+        
+        /* 消息 */
+        .alert { padding: 12px 20px; border-radius: 4px; margin-bottom: 1rem; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/" class="logo">LiteJava</a>
+            <div>
+                <a href="/">首页</a>
+                <a href="/users">用户管理</a>
+                <a href="/about">关于</a>
+            </div>
+        </div>
+    </nav>
+    
+    <main>
+        <div class="container" th:replace="${content}">
+            <!-- 页面内容 -->
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>Powered by LiteJava &copy; 2024</p>
+        </div>
+    </footer>
+</body>
+</html>

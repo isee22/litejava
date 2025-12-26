@@ -1,0 +1,21 @@
+# 图书管理系统配置
+
+server:
+  port: 8080
+  devMode: true
+
+log:
+  level: INFO          # DEBUG/INFO/WARN/ERROR
+  file: logs/app.log   # 日志文件路径，不配置则只输出到控制台
+  pattern: "yyyy-MM-dd HH:mm:ss"
+
+database:
+  url: jdbc:mysql://localhost:3306/bookdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  pool:
+    maxSize: 10
+
+upload:
+  dir: uploads
+  maxSize: 10485760  # 10MB
