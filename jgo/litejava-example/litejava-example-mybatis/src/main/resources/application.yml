@@ -1,0 +1,8 @@
+server:
+  port: 8080
+
+db:
+  driver: com.mysql.cj.jdbc.Driver
+  url: jdbc:mysql://localhost:3306/litejava?useSSL=false&serverTimezone=UTC
+  username: root
+  password: 123456

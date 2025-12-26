@@ -1,0 +1,9 @@
+# 图书管理系统配置 - JPA 版本
+
+server:
+  port: 8080
+
+jpa:
+  url: jdbc:mysql://localhost:3306/litejava?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
