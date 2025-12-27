@@ -45,12 +45,15 @@ public class BookApp {
         }).whitelist("/", "/api/auth/login", "/api/auth/register")
           .whitelistPrefix("/static", "/api/books"));
         
+        // 配置 FilePlugin
+        app.file.uploadDir(app.conf.getString("upload", "dir", "./uploads"));
+        app.file.maxFileSize(app.conf.getLong("upload", "maxSize", 10485760L));
+        
         // 路由
         app.register(new AuthController().routes());
         app.register(new BookController().routes());
         app.register(new FileController(
-            app.conf.getString("upload", "dir", "uploads"),
-            app.conf.getLong("upload", "maxSize", 10485760L)
+            app.conf.getString("upload", "subDir", "covers")
         ).routes());
         
         app.run();
