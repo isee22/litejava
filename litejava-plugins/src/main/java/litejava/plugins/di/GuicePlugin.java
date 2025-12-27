@@ -104,6 +104,10 @@ public class GuicePlugin extends Plugin {
     private final List<com.google.inject.Module> modules = new ArrayList<>();
     private final List<Consumer<Binder>> bindings = new ArrayList<>();
     
+    public GuicePlugin() {
+        instance = this;
+    }
+    
     /**
      * 添加绑定 (编程式，无注解)
      */
@@ -135,7 +139,6 @@ public class GuicePlugin extends Plugin {
         }
         
         injector = Guice.createInjector(modules);
-        if (instance == null) instance = this;
         app.log.info("GuicePlugin configured with " + modules.size() + " module(s)");
     }
     

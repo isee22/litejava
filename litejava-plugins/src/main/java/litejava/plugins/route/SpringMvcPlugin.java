@@ -101,9 +101,12 @@ public class SpringMvcPlugin extends Plugin {
     /** 主类，用于自动检测扫描包 */
     public Class<?> mainClass;
     
-    public SpringMvcPlugin() {}
+    public SpringMvcPlugin() {
+        instance = this;
+    }
     
     public SpringMvcPlugin(Class<?> mainClass) {
+        instance = this;
         this.mainClass = mainClass;
     }
     
@@ -132,7 +135,6 @@ public class SpringMvcPlugin extends Plugin {
             registerController(clazz);
         }
         
-        if (instance == null) instance = this;
         app.log.info("SpringMvcPlugin registered " + controllers.size() + " controller(s)");
     }
     

@@ -11,9 +11,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * // 开发/测试环境使用
  * app.use(new MemoryCachePlugin());
  * 
- * // 存储对象
+ * // 通过基类 instance 访问 (推荐，便于切换实现)
  * CachePlugin.instance.set("book:1", book);
  * Book book = CachePlugin.instance.get("book:1");
+ * 
+ * // 需要 Memory 特有功能时，强制转换
+ * MemoryCachePlugin mem = (MemoryCachePlugin) CachePlugin.instance;
+ * mem.clear();
+ * int size = mem.size();
  * }</pre>
  * 
  * <h2>注意</h2>
@@ -25,15 +30,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MemoryCachePlugin extends CachePlugin {
     
-    /** 默认实例（单例访问） */
-    public static MemoryCachePlugin instance;
-    
     private final Map<String, CacheEntry> store = new ConcurrentHashMap<>();
     
     @Override
     public void config() {
         super.config();
-        if (instance == null) instance = this;
     }
     
     @Override

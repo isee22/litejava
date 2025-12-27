@@ -38,9 +38,12 @@ public class CorsPlugin extends MiddlewarePlugin {
     public int maxAge = 86400;
     public boolean credentials = false;
     
-    public CorsPlugin() {}
+    public CorsPlugin() {
+        instance = this;
+    }
     
     public CorsPlugin(String origin) {
+        instance = this;
         this.origin = origin;
     }
     
@@ -51,8 +54,6 @@ public class CorsPlugin extends MiddlewarePlugin {
         headers = app.conf.getString("cors", "headers", headers);
         maxAge = app.conf.getInt("cors", "maxAge", maxAge);
         credentials = app.conf.getBool("cors", "credentials", credentials);
-        
-        if (instance == null) instance = this;
     }
     
     @Override

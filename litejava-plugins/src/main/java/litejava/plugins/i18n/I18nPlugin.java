@@ -67,9 +67,8 @@ public class I18nPlugin extends MiddlewarePlugin {
     public String queryParam = "lang";
     public String cookieName = "lang";
     
-    @Override
-    public void config() {
-        if (instance == null) instance = this;
+    public I18nPlugin() {
+        instance = this;
     }
     
     @Override

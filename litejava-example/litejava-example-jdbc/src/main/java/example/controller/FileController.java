@@ -21,22 +21,8 @@ public class FileController {
     public Routes routes() {
         return new Routes()
             .post("/api/upload/cover", this::upload)
-                .summary("上传封面图片")
-                .tags("文件管理")
-                .response(200, Map.class, "上传成功")
-                .response(400, Map.class, "上传失败")
             .get("/api/files/:filename", this::download)
-                .summary("下载文件")
-                .tags("文件管理")
-                .param("filename", String.class, "文件名")
-                .response(200, null, "文件内容")
-                .response(404, Map.class, "文件不存在")
             .delete("/api/files/:filename", this::delete)
-                .summary("删除文件")
-                .tags("文件管理")
-                .param("filename", String.class, "文件名")
-                .response(200, Map.class, "删除成功")
-                .response(404, Map.class, "文件不存在")
             .end();
     }
     

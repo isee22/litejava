@@ -129,6 +129,11 @@ import java.util.function.*;
  */
 public class App {
     
+    // ==================== 静态实例 ====================
+    
+    /** 默认实例（单例访问） */
+    public static App instance;
+    
     // ==================== 应用配置 ====================
     
     /** 服务器端口，默认 8080，可通过配置文件 server.port 覆盖 */
@@ -181,6 +186,12 @@ public class App {
     
     /** 启动前回调列表 */
     private final List<Runnable> onReadyCallbacks = new ArrayList<>();
+    
+    // ==================== 构造函数 ====================
+    
+    public App() {
+        instance = this;
+    }
     
     // ==================== 链式配置 API ====================
     
@@ -629,8 +640,19 @@ public class App {
         }
     }
     
+    /**
+     * 获取已注册的插件
+     * 
+     * <pre>{@code
+     * JdbcPlugin jdbc = app.getPlugin(JdbcPlugin.class);
+     * jdbc.jdbcTemplate.query(...);
+     * }</pre>
+     * 
+     * @param clazz 插件类
+     * @return 插件实例，未注册返回 null
+     */
     @SuppressWarnings("unchecked")
-    public <T> T plugin(Class<T> clazz) {
+    public <T> T getPlugin(Class<T> clazz) {
         return (T) plugins.get(clazz.getSimpleName());
     }
 }

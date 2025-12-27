@@ -34,9 +34,6 @@ import java.util.Map;
  */
 public class FreemarkerPlugin extends ViewPlugin {
     
-    /** 默认实例（单例访问） */
-    public static FreemarkerPlugin instance;
-    
     public Configuration cfg;
     public String templateDir = "templates";
     
@@ -48,12 +45,11 @@ public class FreemarkerPlugin extends ViewPlugin {
     
     @Override
     public void config() {
+        super.config();
         try {
             cfg = new Configuration(Configuration.VERSION_2_3_32);
             cfg.setDirectoryForTemplateLoading(new File(templateDir));
             cfg.setDefaultEncoding("UTF-8");
-            
-            if (instance == null) instance = this;
         } catch (Exception e) {
             throw new RuntimeException("Failed to init Freemarker", e);
         }

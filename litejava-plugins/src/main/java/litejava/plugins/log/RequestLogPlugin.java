@@ -30,12 +30,14 @@ public class RequestLogPlugin extends MiddlewarePlugin {
     public boolean enabled = true;
     public String format = "%s %s %d %dms";
     
+    public RequestLogPlugin() {
+        instance = this;
+    }
+    
     @Override
     public void config() {
         enabled = app.conf.getBool("requestLog", "enabled", enabled);
         format = app.conf.getString("requestLog", "format", format);
-        
-        if (instance == null) instance = this;
     }
     
     @Override

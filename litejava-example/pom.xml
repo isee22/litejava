@@ -7,7 +7,7 @@
     <parent>
         <groupId>litejava</groupId>
         <artifactId>litejava-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0-jdk8</version>
     </parent>
 
     <artifactId>litejava-example</artifactId>
@@ -21,39 +21,4 @@
         <module>litejava-example-jpa</module>
         <module>litejava-example-mybatis</module>
     </modules>
-
-    <dependencies>
-        <!-- LiteJava -->
-        <dependency>
-            <groupId>litejava</groupId>
-            <artifactId>litejava-plugins</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
-        <!-- YamlConfPlugin -->
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>2.2</version>
-        </dependency>
-        
-        <!-- JacksonPlugin -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.15.3</version>
-        </dependency>
-        
-        <!-- Database Common -->
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
-        </dependency>
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>4.0.3</version>
-        </dependency>
-    </dependencies>
 </project>
