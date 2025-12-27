@@ -64,12 +64,14 @@ public class MyBatisPlugin extends Plugin {
     private Class<?>[] mapperClasses;
     
     public MyBatisPlugin() {
+        instance = this;
     }
     
     /**
      * 构造时指定 Mapper 类
      */
     public MyBatisPlugin(Class<?>... mapperClasses) {
+        instance = this;
         this.mapperClasses = mapperClasses;
     }
     
@@ -102,7 +104,6 @@ public class MyBatisPlugin extends Plugin {
         }
         
         sqlSessionFactory = new SqlSessionFactoryBuilder().build(configuration);
-        if (instance == null) instance = this;
         app.log.info("MyBatisPlugin configured");
     }
     

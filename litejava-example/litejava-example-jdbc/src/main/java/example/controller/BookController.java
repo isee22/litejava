@@ -16,36 +16,10 @@ public class BookController {
     public Routes routes() {
         return new Routes()
             .get("/api/books", this::list)
-                .summary("获取图书列表")
-                .desc("支持关键字搜索")
-                .tags("图书管理")
-                .param("q", String.class, false, "搜索关键字")
-                .response(200, Map.class, "图书列表")
             .get("/api/books/:id", this::get)
-                .summary("获取图书详情")
-                .tags("图书管理")
-                .param("id", Long.class, "图书ID")
-                .response(200, Book.class, "图书详情")
-                .response(404, Map.class, "图书不存在")
             .post("/api/books", this::create)
-                .summary("创建图书")
-                .tags("图书管理")
-                .body(Book.class, "图书信息")
-                .response(201, Book.class, "创建成功")
-                .response(400, Map.class, "参数错误")
             .put("/api/books/:id", this::update)
-                .summary("更新图书")
-                .tags("图书管理")
-                .param("id", Long.class, "图书ID")
-                .body(Book.class, "图书信息")
-                .response(200, Book.class, "更新成功")
-                .response(404, Map.class, "图书不存在")
             .delete("/api/books/:id", this::delete)
-                .summary("删除图书")
-                .tags("图书管理")
-                .param("id", Long.class, "图书ID")
-                .response(200, Map.class, "删除成功")
-                .response(404, Map.class, "图书不存在")
             .end();
     }
     
@@ -56,7 +30,7 @@ public class BookController {
     }
     
     void get(Context ctx) {
-        long id = ctx.pathParam("id", Long.class);
+        long id = ctx.pathParamLong("id");
         Book book = Services.book.getById(id);
         if (book != null) {
             ctx.ok(book);
@@ -78,7 +52,7 @@ public class BookController {
     }
     
     void update(Context ctx) {
-        long id = ctx.pathParam("id", Long.class);
+        long id = ctx.pathParamLong("id");
         Book book = ctx.bindJSON(Book.class);
         book.id = id;
         
@@ -91,7 +65,7 @@ public class BookController {
     }
     
     void delete(Context ctx) {
-        long id = ctx.pathParam("id", Long.class);
+        long id = ctx.pathParamLong("id");
         if (Services.book.delete(id)) {
             ctx.ok("删除成功");
         } else {

@@ -53,13 +53,15 @@ public class SchedulePlugin extends Plugin {
     public Scheduler scheduler;
     private int jobCounter = 0;
     
+    public SchedulePlugin() {
+        instance = this;
+    }
+    
     @Override
     public void config() {
         try {
             scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
-            
-            if (instance == null) instance = this;
         } catch (SchedulerException e) {
             throw new RuntimeException("Failed to start scheduler", e);
         }

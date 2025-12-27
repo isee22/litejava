@@ -48,42 +48,37 @@ import io.jsonwebtoken.security.Keys;
  * app.use(new JwtPlugin("your-secret-key-at-least-32-chars"));
  * 
  * // 生成 token
- * String token = JwtPlugin.get().sign(Map.of("userId", 123, "role", "admin"));
+ * String token = JwtPlugin.instance.sign(Map.of("userId", 123, "role", "admin"));
  * 
  * // 验证 token
- * Claims claims = JwtPlugin.get().verify(token);
+ * Claims claims = JwtPlugin.instance.verify(token);
  * int userId = claims.get("userId", Integer.class);
  * }</pre>
  */
 public class JwtPlugin extends Plugin {
     
-    private static JwtPlugin instance;
+    public static JwtPlugin instance;
     private Key key;
     public long expireMs = 3600000; // 1小时
     
     public JwtPlugin() {
+        instance = this;
         this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     }
     
     public JwtPlugin(String secret) {
+        instance = this;
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
     
     @Override
     public void config() {
-        instance = this;
-        
         // 从配置加载
         String secret = app.conf.getString("jwt", "secret", null);
         if (secret != null && !secret.isEmpty()) {
             this.key = Keys.hmacShaKeyFor(secret.getBytes());
         }
         expireMs = app.conf.getLong("jwt", "expireMs", expireMs);
-    }
-    
-    @Override
-    public void uninstall() {
-        instance = null;
     }
     
     public String sign(Map<String, Object> claims) {
@@ -101,9 +96,5 @@ public class JwtPlugin extends Plugin {
             .build()
             .parseClaimsJws(token)
             .getBody();
-    }
-    
-    public static JwtPlugin get() {
-        return instance;
     }
 }

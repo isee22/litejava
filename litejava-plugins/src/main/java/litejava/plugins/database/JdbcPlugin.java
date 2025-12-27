@@ -124,9 +124,12 @@ public class JdbcPlugin extends Plugin {
         return new JdbcPlugin(configPrefix);
     }
     
-    public JdbcPlugin() {}
+    public JdbcPlugin() {
+        instance = this;
+    }
     
     public JdbcPlugin(String configPrefix) {
+        instance = this;
         this.configPrefix = configPrefix;
     }
     
@@ -138,7 +141,6 @@ public class JdbcPlugin extends Plugin {
         jdbcTemplate = new JdbcTemplate(dataSource);
         txTemplate = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
         
-        if (instance == null) instance = this;
         app.log.info("JdbcPlugin configured (" + configPrefix + ")");
     }
     

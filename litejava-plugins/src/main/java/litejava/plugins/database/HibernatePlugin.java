@@ -93,6 +93,10 @@ public class HibernatePlugin extends Plugin {
     /** 手动注册的实体类列表，可在 use() 前添加 */
     public List<Class<?>> entities = new ArrayList<>();
     
+    public HibernatePlugin() {
+        instance = this;
+    }
+    
     @Override
     public void config() {
         Configuration cfg = new Configuration();
@@ -133,7 +137,6 @@ public class HibernatePlugin extends Plugin {
         }
         
         sessionFactory = cfg.buildSessionFactory();
-        if (instance == null) instance = this;
         app.log.info("HibernatePlugin configured");
     }
     

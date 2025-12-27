@@ -43,8 +43,6 @@ import java.util.Map;
  */
 public class ThymeleafPlugin extends ViewPlugin {
     
-    public static ThymeleafPlugin instance;
-    
     public TemplateEngine engine;
     public String templateDir = "templates/";
     public String suffix = ".html";
@@ -95,6 +93,7 @@ public class ThymeleafPlugin extends ViewPlugin {
     
     @Override
     public void config() {
+        super.config();
         engine = new TemplateEngine();
         
         if (useFileSystem) {
@@ -135,8 +134,6 @@ public class ThymeleafPlugin extends ViewPlugin {
                 }
             }
         }
-        
-        if (instance == null) instance = this;
     }
     
     @Override

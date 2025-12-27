@@ -13,7 +13,7 @@
 
     <groupId>litejava</groupId>
     <artifactId>benchmark-springboot</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0-jdk8</version>
     <name>Benchmark Spring Boot</name>
 
     <properties>

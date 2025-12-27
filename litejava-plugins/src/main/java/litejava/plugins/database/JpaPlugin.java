@@ -93,9 +93,12 @@ public class JpaPlugin extends Plugin {
     /** persistence.xml 中定义的 persistence-unit 名称 */
     public String persistenceUnit = "default";
     
-    public JpaPlugin() {}
+    public JpaPlugin() {
+        instance = this;
+    }
     
     public JpaPlugin(String persistenceUnit) {
+        instance = this;
         this.persistenceUnit = persistenceUnit;
     }
     
@@ -122,7 +125,6 @@ public class JpaPlugin extends Plugin {
         }
         
         emf = Persistence.createEntityManagerFactory(persistenceUnit, props);
-        if (instance == null) instance = this;
         app.log.info("JpaPlugin configured (persistence-unit: " + persistenceUnit + ")");
     }
     

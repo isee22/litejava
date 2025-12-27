@@ -6,21 +6,22 @@
     <parent>
         <groupId>litejava</groupId>
         <artifactId>litejava-benchmark</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0-jdk8</version>
     </parent>
     <artifactId>benchmark-litejava-jettyvt</artifactId>
+    <version>1.0.0-jdk21</version>
     <name>Benchmark LiteJava Jetty + VT</name>
 
     <dependencies>
         <dependency>
             <groupId>litejava</groupId>
             <artifactId>litejava-plugins</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.0-jdk8</version>
         </dependency>
         <dependency>
             <groupId>litejava</groupId>
             <artifactId>litejava-plugins-vt</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.0-jdk21</version>
         </dependency>
         <dependency>
             <groupId>com.zaxxer</groupId>

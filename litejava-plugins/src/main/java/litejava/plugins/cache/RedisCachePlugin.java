@@ -32,21 +32,17 @@ import redis.clients.jedis.JedisPoolConfig;
  * <pre>{@code
  * app.use(new RedisCachePlugin());
  * 
- * // 存储对象 (自动 JSON 序列化)
+ * // 通过基类 instance 访问 (推荐，便于切换实现)
  * CachePlugin.instance.set("book:1", book);
  * Map<String, Object> book = CachePlugin.instance.get("book:1");
  * 
- * // 直接使用 Jedis (高级操作)
+ * // 需要 Redis 特有功能时，强制转换
  * RedisCachePlugin redis = (RedisCachePlugin) CachePlugin.instance;
- * try (Jedis jedis = redis.pool.getResource()) {
- *     jedis.hset("hash", "field", "value");
- * }
+ * redis.hset("hash", "field", "value");
+ * redis.incr("counter");
  * }</pre>
  */
 public class RedisCachePlugin extends CachePlugin {
-    
-    /** 默认实例（单例访问） */
-    public static RedisCachePlugin instance;
     
     /** Jedis 连接池，初始化后可用于高级操作 */
     public JedisPool pool;
@@ -86,7 +82,6 @@ public class RedisCachePlugin extends CachePlugin {
         } else {
             pool = new JedisPool(config, host, port, 2000, null, database);
         }
-        if (instance == null) instance = this;
     }
     
     @Override

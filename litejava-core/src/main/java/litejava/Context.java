@@ -612,6 +612,48 @@ public class Context {
     }
     
     /**
+     * 获取路径参数为 int
+     * @param name 参数名
+     * @return int 值，参数不存在返回 0
+     */
+    public int pathParamInt(String name) {
+        String value = params.get(name);
+        return value != null ? Integer.parseInt(value) : 0;
+    }
+    
+    /**
+     * 获取路径参数为 int（带默认值）
+     * @param name 参数名
+     * @param defaultValue 默认值
+     * @return int 值
+     */
+    public int pathParamInt(String name, int defaultValue) {
+        String value = params.get(name);
+        return value != null ? Integer.parseInt(value) : defaultValue;
+    }
+    
+    /**
+     * 获取路径参数为 long
+     * @param name 参数名
+     * @return long 值，参数不存在返回 0
+     */
+    public long pathParamLong(String name) {
+        String value = params.get(name);
+        return value != null ? Long.parseLong(value) : 0L;
+    }
+    
+    /**
+     * 获取路径参数为 long（带默认值）
+     * @param name 参数名
+     * @param defaultValue 默认值
+     * @return long 值
+     */
+    public long pathParamLong(String name, long defaultValue) {
+        String value = params.get(name);
+        return value != null ? Long.parseLong(value) : defaultValue;
+    }
+    
+    /**
      * 获取查询参数 (Gin: c.Query, Javalin: ctx.queryParam)
      * 
      * <p>查询参数是 URL 中 ? 后面的键值对，GET/POST/PUT/DELETE 等所有请求都可以带。
@@ -677,6 +719,69 @@ public class Context {
         String value = queryParams.get(name);
         if (value == null) return null;
         return convert(value, clazz);
+    }
+    
+    /**
+     * 获取查询参数为 int
+     * @param name 参数名
+     * @return int 值，参数不存在返回 0
+     */
+    public int queryParamInt(String name) {
+        String value = queryParams.get(name);
+        return value != null ? Integer.parseInt(value) : 0;
+    }
+    
+    /**
+     * 获取查询参数为 int（带默认值）
+     * @param name 参数名
+     * @param defaultValue 默认值
+     * @return int 值
+     */
+    public int queryParamInt(String name, int defaultValue) {
+        String value = queryParams.get(name);
+        return value != null ? Integer.parseInt(value) : defaultValue;
+    }
+    
+    /**
+     * 获取查询参数为 long
+     * @param name 参数名
+     * @return long 值，参数不存在返回 0
+     */
+    public long queryParamLong(String name) {
+        String value = queryParams.get(name);
+        return value != null ? Long.parseLong(value) : 0L;
+    }
+    
+    /**
+     * 获取查询参数为 long（带默认值）
+     * @param name 参数名
+     * @param defaultValue 默认值
+     * @return long 值
+     */
+    public long queryParamLong(String name, long defaultValue) {
+        String value = queryParams.get(name);
+        return value != null ? Long.parseLong(value) : defaultValue;
+    }
+    
+    /**
+     * 获取查询参数为 boolean
+     * @param name 参数名
+     * @return boolean 值，参数不存在返回 false
+     */
+    public boolean queryParamBool(String name) {
+        String value = queryParams.get(name);
+        return value != null && Boolean.parseBoolean(value);
+    }
+    
+    /**
+     * 获取查询参数为 boolean（带默认值）
+     * @param name 参数名
+     * @param defaultValue 默认值
+     * @return boolean 值
+     */
+    public boolean queryParamBool(String name, boolean defaultValue) {
+        String value = queryParams.get(name);
+        return value != null ? Boolean.parseBoolean(value) : defaultValue;
     }
     
     /**

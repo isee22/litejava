@@ -42,15 +42,15 @@ public abstract class CachePlugin extends Plugin {
     /** 默认过期时间 (秒)，0 表示永不过期 */
     public int defaultTtl = 3600;
     
+    public CachePlugin() {
+        instance = this;
+    }
+    
     @Override
     public void config() {
         keyPrefix = app.conf.getString("cache", "keyPrefix", keyPrefix);
         defaultTtl = app.conf.getInt("cache", "defaultTtl", defaultTtl);
-        if (instance == null) instance = this;
     }
-    
-    @Override
-    public void uninstall() {}
     
     /** 带前缀的完整 key */
     public String key(String key) {

@@ -44,6 +44,10 @@ public class MetricsPlugin extends MiddlewarePlugin {
     
     private Timer.Builder requestTimer;
     
+    public MetricsPlugin() {
+        instance = this;
+    }
+    
     @Override
     public void config() {
         registry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
@@ -63,8 +67,6 @@ public class MetricsPlugin extends MiddlewarePlugin {
             ctx.header("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
             ctx.text(registry.scrape());
         });
-        
-        if (instance == null) instance = this;
     }
     
     @Override

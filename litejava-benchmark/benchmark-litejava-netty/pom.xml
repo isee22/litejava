@@ -6,7 +6,7 @@
     <parent>
         <groupId>litejava</groupId>
         <artifactId>litejava-benchmark</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0-jdk8</version>
     </parent>
     <artifactId>benchmark-litejava-netty</artifactId>
     <name>Benchmark LiteJava Netty</name>
@@ -20,7 +20,7 @@
         <dependency>
             <groupId>litejava</groupId>
             <artifactId>litejava-plugins-vt</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.0-jdk21</version>
         </dependency>
         <dependency>
             <groupId>com.zaxxer</groupId>

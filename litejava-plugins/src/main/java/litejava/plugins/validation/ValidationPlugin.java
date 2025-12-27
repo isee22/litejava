@@ -77,11 +77,14 @@ public class ValidationPlugin extends Plugin {
     /** JSR-380 Validator */
     public Validator validator;
     
+    public ValidationPlugin() {
+        instance = this;
+    }
+    
     @Override
     public void config() {
         factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
-        if (instance == null) instance = this;
     }
     
     @Override

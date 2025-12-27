@@ -7,10 +7,11 @@
     <parent>
         <groupId>litejava</groupId>
         <artifactId>litejava-parent</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0-jdk8</version>
     </parent>
 
     <artifactId>litejava-plugins-vt</artifactId>
+    <version>1.0.0-jdk21</version>
     <name>LiteJava Virtual Thread Plugins</name>
     <description>Virtual thread plugins for LiteJava (Java 21+)</description>
 
@@ -35,18 +36,11 @@
     </build>
 
     <dependencies>
-        <!-- LiteJava Core -->
-        <dependency>
-            <groupId>litejava</groupId>
-            <artifactId>litejava-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <!-- LiteJava Plugins (for inheritance) -->
+        <!-- LiteJava Plugins (includes litejava-core) -->
         <dependency>
             <groupId>litejava</groupId>
             <artifactId>litejava-plugins</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.0-jdk8</version>
         </dependency>
 
         <!-- Jetty 11 for Virtual Threads -->
@@ -54,11 +48,13 @@
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-server</artifactId>
             <version>${jetty.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-servlet</artifactId>
             <version>${jetty.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Netty for Virtual Threads -->
@@ -66,6 +62,7 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>4.1.100.Final</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Undertow for Virtual Threads -->
@@ -73,6 +70,7 @@
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
             <version>2.3.10.Final</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- HikariCP 5.x for Virtual Threads -->

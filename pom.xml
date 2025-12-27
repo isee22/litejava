@@ -6,7 +6,7 @@
 
     <groupId>litejava</groupId>
     <artifactId>litejava-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0-jdk8</version>
     <packaging>pom</packaging>
 
     <name>LiteJava Parent</name>
