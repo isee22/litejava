@@ -15,15 +15,16 @@ import java.util.function.*;
  *   <li>所有功能通过插件提供（服务器、JSON、配置、日志等）</li>
  *   <li>零魔法 - 所见即所得，无隐藏规则</li>
  *   <li>显式优于隐式 - 所有配置通过代码完成</li>
+ *   <li>性能比肩 Go 语言框架</li>
  * </ul>
  * 
  * <h2>设计理念</h2>
- * <p>借鉴 Go/Gin 的设计哲学：
  * <ul>
  *   <li>简洁直接的 API</li>
- *   <li>Gin-style 路由（分组、参数、通配符）</li>
+ *   <li>灵活的路由（分组、参数、通配符）</li>
  *   <li>Koa-style 洋葱中间件模型</li>
  *   <li>核心模块零外部依赖</li>
+ *   <li>插件自由装配，无强制依赖</li>
  * </ul>
  * 
  * <h2>快速开始</h2>
@@ -57,7 +58,7 @@ import java.util.function.*;
  * app.run();
  * }</pre>
  * 
- * <h2>路由分组（Gin-style）</h2>
+ * <h2>路由分组</h2>
  * <pre>{@code
  * // API 版本分组
  * app.group("/api/v1", api -> {
@@ -68,7 +69,7 @@ import java.util.function.*;
  * 
  * // 嵌套分组
  * app.group("/admin", admin -> {
- *     admin.use(new AuthMiddleware());  // 分组级中间件
+ *     admin.use(new AuthPlugin(token -> jwtPlugin.verify(token)));  // 分组级中间件
  *     admin.group("/users", users -> {
  *         users.get("/", UserController::list);
  *         users.delete("/:id", UserController::delete);
@@ -98,26 +99,17 @@ import java.util.function.*;
  * });
  * }</pre>
  * 
- * <h2>中间件（Koa-style 洋葱模型）</h2>
+ * <h2>中间件（洋葱模型）</h2>
  * <pre>{@code
  * // 全局中间件
- * app.use(new LogMiddleware());     // 请求日志
- * app.use(new CorsMiddleware());    // 跨域处理
- * app.use(new RecoveryMiddleware()); // 异常恢复
+ * app.use(new RecoveryPlugin());    // 异常恢复
+ * app.use(new RequestLogPlugin());  // 请求日志
+ * app.use(new CorsPlugin());        // 跨域处理
  * 
- * // 自定义中间件
- * public class AuthMiddleware extends MiddlewarePlugin {
- *     @Override
- *     public void handle(Context ctx, Next next) throws Exception {
- *         String token = ctx.header("Authorization");
- *         if (token == null) {
- *             ctx.abortWithJson(401, Map.of("error", "Unauthorized"));
- *             return;
- *         }
- *         ctx.state.put("user", validateToken(token));
- *         next.run();  // 继续执行后续中间件和 handler
- *     }
- * }
+ * // 认证中间件（推荐使用内置 AuthPlugin）
+ * app.use(new AuthPlugin(token -> jwtPlugin.verify(token))
+ *     .whitelist("/", "/login")
+ *     .whitelistPrefix("/static"));
  * }</pre>
  * 
  * @author LiteJava Team
@@ -175,6 +167,9 @@ public class App {
     
     /** 视图/模板插件 */
     public ViewPlugin view;
+    
+    /** 文件处理插件 */
+    public FilePlugin file = new FilePlugin();
     
     // ==================== 内部状态 ====================
     
@@ -258,6 +253,8 @@ public class App {
             this.json = (JsonPlugin) plugin;
         } else if (plugin instanceof ViewPlugin) {
             this.view = (ViewPlugin) plugin;
+        } else if (plugin instanceof FilePlugin) {
+            this.file = (FilePlugin) plugin;
         } else if (plugin instanceof ServerPlugin) {
             this.server = (ServerPlugin) plugin;
         } else if (plugin instanceof RouterPlugin) {
@@ -297,7 +294,7 @@ public class App {
         return this;
     }
     
-    // ==================== 路由注册（Gin-style）====================
+    // ==================== 路由注册 ====================
     
     /**
      * 注册 GET 路由
@@ -345,7 +342,7 @@ public class App {
     }
     
     /**
-     * 设置 404 处理器（Gin-style NoRoute）
+     * 设置 404 处理器
      */
     public App noRoute(Handler handler) {
         router.noRoute(handler);
@@ -353,7 +350,7 @@ public class App {
     }
     
     /**
-     * 设置 405 处理器（Gin-style NoMethod）
+     * 设置 405 处理器
      */
     public App noMethod(Handler handler) {
         router.noMethod(handler);

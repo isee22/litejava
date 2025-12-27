@@ -41,22 +41,26 @@ package litejava;
  * }
  * }</pre>
  * 
- * <h2>认证中间件示例</h2>
+ * <h2>认证中间件示例（推荐使用内置 AuthPlugin）</h2>
  * <pre>{@code
- * public class AuthMiddleware extends MiddlewarePlugin {
+ * // 方式1：使用内置 AuthPlugin（推荐）
+ * app.use(new AuthPlugin(token -> jwtPlugin.verify(token))
+ *     .whitelist("/", "/login")
+ *     .whitelistPrefix("/static"));
+ * 
+ * // 方式2：自定义中间件
+ * public class MyAuthMiddleware extends MiddlewarePlugin {
  *     @Override
  *     public void handle(Context ctx, Next next) throws Exception {
  *         String token = ctx.header("Authorization");
  *         
  *         if (token == null || !validateToken(token)) {
- *             ctx.abortWithJson(401, Map.of("error", "Unauthorized"));
+ *             ctx.status(401).json(Map.of("error", "Unauthorized"));
  *             return;  // 不调用 next.run()，中断请求
  *         }
  *         
- *         // 将用户信息存入 state，供后续 handler 使用
  *         ctx.state.put("user", getUserFromToken(token));
- *         
- *         next.run();  // 继续执行
+ *         next.run();
  *     }
  * }
  * }</pre>
@@ -82,7 +86,7 @@ package litejava;
  * app.use(new RecoveryPlugin());     // 1. 异常恢复（最外层）
  * app.use(new RequestLogPlugin());   // 2. 请求日志
  * app.use(new CorsPlugin());         // 3. 跨域处理
- * app.use(new AuthMiddleware());     // 4. 认证
+ * app.use(new AuthPlugin(...));      // 4. 认证
  * // ... 其他中间件
  * 
  * // 静态文件建议用路由方式，而非中间件

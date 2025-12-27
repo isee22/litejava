@@ -291,11 +291,25 @@ public class Context {
     }
     
     /**
-     * 解析 multipart/form-data 文件上传
+     * 解析 multipart/form-data 文件上传（兼容旧 API）
+     * 
      * @return 文件 Map，key 为表单字段名
+     * @deprecated 推荐使用 {@link #file(String)} 或 {@link #files(String)}
      */
+    @Deprecated
     public Map<String, UploadedFile> getFiles() {
         Map<String, UploadedFile> result = new LinkedHashMap<>();
+        if (app != null && app.file != null) {
+            Map<String, java.util.List<UploadedFile>> files = app.file.parseMultipart(this);
+            for (Map.Entry<String, java.util.List<UploadedFile>> entry : files.entrySet()) {
+                if (!entry.getValue().isEmpty()) {
+                    result.put(entry.getKey(), entry.getValue().get(0));
+                }
+            }
+            return result;
+        }
+        
+        // 降级到内置解析（无 FilePlugin 时）
         String contentType = headers.get("Content-Type");
         if (contentType == null) contentType = headers.get("content-type");
         if (contentType == null || !contentType.startsWith("multipart/form-data")) {
@@ -317,6 +331,60 @@ public class Context {
         }
         
         return result;
+    }
+    
+    /**
+     * 获取单个上传文件
+     * 
+     * <pre>{@code
+     * UploadedFile avatar = ctx.file("avatar");
+     * if (avatar != null) {
+     *     String path = app.file.save(avatar, "avatars");
+     *     ctx.ok(Map.of("url", "/files/" + path));
+     * }
+     * }</pre>
+     * 
+     * @param fieldName 表单字段名
+     * @return 上传文件，不存在返回 null
+     */
+    public UploadedFile file(String fieldName) {
+        if (app != null && app.file != null) {
+            return app.file.getFile(this, fieldName);
+        }
+        return getFiles().get(fieldName);
+    }
+    
+    /**
+     * 获取多个上传文件（同一字段名）
+     * 
+     * <pre>{@code
+     * List<UploadedFile> photos = ctx.files("photos");
+     * for (UploadedFile photo : photos) {
+     *     app.file.save(photo, "gallery");
+     * }
+     * }</pre>
+     * 
+     * @param fieldName 表单字段名
+     * @return 文件列表，不存在返回空列表
+     */
+    public java.util.List<UploadedFile> files(String fieldName) {
+        if (app != null && app.file != null) {
+            return app.file.getFiles(this, fieldName);
+        }
+        UploadedFile file = getFiles().get(fieldName);
+        return file != null ? java.util.Collections.singletonList(file) : java.util.Collections.emptyList();
+    }
+    
+    /**
+     * 获取所有上传文件
+     * 
+     * @return 所有文件列表
+     */
+    public java.util.List<UploadedFile> allFiles() {
+        if (app != null && app.file != null) {
+            return app.file.getAllFiles(this);
+        }
+        return new java.util.ArrayList<>(getFiles().values());
     }
     
     private void parseMultipartPart(String part, Map<String, UploadedFile> result) {

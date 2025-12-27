@@ -84,7 +84,7 @@ app.group("/api/v1", api -> {
 
 // 嵌套分组 + 分组级中间件
 app.group("/admin", admin -> {
-    admin.use(new AuthMiddleware());  // 只对 /admin/* 生效
+    admin.use(new AuthPlugin(token -> jwtPlugin.verify(token)));  // 只对 /admin/* 生效
     admin.group("/users", users -> {
         users.get("/", UserController::list);
         users.delete("/:id", UserController::delete);
@@ -110,19 +110,17 @@ app.use((ctx, next) -> {
 });
 
 
-// 认证中间件
-public class AuthMiddleware extends MiddlewarePlugin {
-    @Override
-    public void handle(Context ctx, Next next) throws Exception {
-        String token = ctx.header("Authorization");
-        if (token == null) {
-            ctx.status(401).json(Map.of("error", "Unauthorized"));
-            return;  // 不调用 next.run()，请求终止
-        }
-        ctx.state.put("user", validateToken(token));
-        next.run();
-    }
-}
+// 认证插件 - 使用内置 AuthPlugin
+app.use(new AuthPlugin(token -> {
+    // 自定义验证逻辑，返回用户信息 Map 或 null
+    return jwtPlugin.verify(token);
+}).whitelist("/", "/login").whitelistPrefix("/static"));
+
+// 在 Handler 中获取认证信息
+app.get("/api/me", ctx -> {
+    Map<String, Object> user = (Map) ctx.state.get("auth");
+    ctx.ok(user);
+});
 ```
 
 ### 3️⃣ 简洁的 Context API
@@ -288,10 +286,10 @@ public class UserService {
         
         // 需要认证的接口
         app.group("/api", api -> {
-            api.use(new JwtAuthMiddleware());
+            api.use(new AuthPlugin(token -> JwtPlugin.instance.verify(token)));
             
             api.get("/me", ctx -> {
-                Map<String, Object> user = (Map) ctx.state.get("user");
+                Map<String, Object> user = (Map) ctx.state.get("auth");
                 ctx.ok(user);
             });
             

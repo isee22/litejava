@@ -1,21 +1,23 @@
 package example.controller;
 
-import example.service.FileService;
 import litejava.Context;
 import litejava.Routes;
 import litejava.UploadedFile;
 
+import java.io.File;
 import java.util.Map;
 
 /**
  * 文件上传下载控制器
+ * 
+ * <p>演示使用 FilePlugin 处理文件上传下载。
  */
 public class FileController {
     
-    private final FileService fileService;
+    private final String uploadSubDir;
     
-    public FileController(String uploadDir, long maxSize) {
-        this.fileService = new FileService(uploadDir, maxSize);
+    public FileController(String uploadSubDir) {
+        this.uploadSubDir = uploadSubDir;
     }
     
     public Routes routes() {
@@ -26,43 +28,78 @@ public class FileController {
             .end();
     }
     
+    /**
+     * 文件上传
+     */
     void upload(Context ctx) throws Exception {
-        Map<String, UploadedFile> files = ctx.getFiles();
-        UploadedFile file = files.get("file");
+        // 使用新的便捷 API
+        UploadedFile file = ctx.file("file");
         
         if (file == null) {
             ctx.status(400).json(Map.of("error", "请选择文件"));
             return;
         }
         
-        Map<String, Object> result = fileService.saveImage(file);
-        if (result.containsKey("error")) {
-            ctx.status(400).json(result);
-        } else {
-            ctx.json(result);
+        // 检查是否为图片
+        if (!file.isImage()) {
+            ctx.status(400).json(Map.of("error", "只能上传图片文件"));
+            return;
         }
+        
+        // 使用 FilePlugin 保存文件
+        String path = ctx.app.file.save(file, uploadSubDir);
+        
+        ctx.ok(Map.of(
+            "url", "/api/files/" + path,
+            "filename", path,
+            "size", file.size,
+            "message", "上传成功"
+        ));
     }
     
+    /**
+     * 文件下载
+     */
     void download(Context ctx) throws Exception {
         String filename = ctx.pathParam("filename");
-        Map<String, Object> result = fileService.getFile(filename);
         
-        if (result.containsKey("error")) {
-            ctx.status((int) result.get("status")).json(Map.of("error", result.get("error")));
+        // 安全检查
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            ctx.status(400).json(Map.of("error", "非法文件名"));
+            return;
+        }
+        
+        // 使用 FilePlugin 下载
+        File file = ctx.app.file.getPath(uploadSubDir + "/" + filename).toFile();
+        if (!file.exists()) {
+            ctx.status(404).json(Map.of("error", "文件不存在"));
+            return;
+        }
+        
+        // 图片内联显示，其他文件下载
+        String contentType = ctx.app.file.guessContentType(filename);
+        if (contentType.startsWith("image/")) {
+            ctx.app.file.inline(ctx, file);
         } else {
-            ctx.header("Content-Type", (String) result.get("contentType"));
-            ctx.data((byte[]) result.get("content"));
+            ctx.app.file.download(ctx, file);
         }
     }
     
+    /**
+     * 文件删除
+     */
     void delete(Context ctx) throws Exception {
         String filename = ctx.pathParam("filename");
-        Map<String, Object> result = fileService.deleteFile(filename);
         
-        if (result.containsKey("error")) {
-            ctx.status((int) result.get("status")).json(Map.of("error", result.get("error")));
+        if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+            ctx.status(400).json(Map.of("error", "非法文件名"));
+            return;
+        }
+        
+        if (ctx.app.file.delete(uploadSubDir + "/" + filename)) {
+            ctx.ok(Map.of("message", "删除成功"));
         } else {
-            ctx.json(result);
+            ctx.status(404).json(Map.of("error", "文件不存在"));
         }
     }
 }
