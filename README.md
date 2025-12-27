@@ -1,8 +1,8 @@
 # LiteJava
 
 <p align="center">
-  <strong>🚀 Java 版的 Gin</strong><br>
-  轻量级 Web 框架，追求简洁、单一、高效
+  <strong>🚀 极简 Java Web 框架</strong><br>
+  性能比肩 Go，轻量高效，插件化扩展，无缝融合 Java 生态
 </p>
 
 <p align="center">
@@ -319,6 +319,8 @@ public class UserService {
 
 ## 性能测试
 
+**🔥 性能比肩 Go 语言框架，部分场景甚至超越 Gin**
+
 > 测试环境：Windows 11, AMD Ryzen 9 5900HX, 32GB RAM, JDK 21  
 > 测试工具：wrk -t4 -c100 -d30s
 
@@ -464,8 +466,8 @@ MyPlugin.instance.doSomething();
 | | Spring Boot | LiteJava |
 |--|-------------|----------|
 | 理念 | 约定优于配置 | 代码即配置 |
-| 优势 | 生态完善、企业级支持 | 轻量快速、代码透明 |
-| 劣势 | 臃肿、魔法多、启动慢 | 生态较小 |
+| 优势 | 企业级支持、社区成熟 | 轻量快速、代码透明、插件灵活 |
+| 劣势 | 臃肿、魔法多、启动慢 | 社区较新 |
 
 ### vs Javalin
 
@@ -480,8 +482,9 @@ MyPlugin.instance.doSomething();
 | | Gin | LiteJava |
 |--|-----|----------|
 | 语言 | Go | Java |
-| 优势 | 性能极致、内存极小 | Java 生态、团队技术栈 |
-| 劣势 | 需要学 Go | 性能略逊（虚拟线程可追平） |
+| 性能 | 极致 | **比肩 Go（见性能测试）** |
+| 优势 | 内存极小 | 插件生态丰富、扩展性强、Java 库无缝集成 |
+| 劣势 | 扩展能力有限、需要学 Go | 内存占用略高 |
 
 ---
 
