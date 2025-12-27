@@ -150,6 +150,8 @@ app.post("/users", ctx -> {
 
 ### 4️⃣ 万物皆插件
 
+**不强制任何功能，自由装配你需要的插件：**
+
 ```java
 // 最小化启动 - 只要路由和服务器
 App app = new App();
@@ -166,6 +168,52 @@ app.use(new SwaggerPlugin());        // 需要 API 文档？
 
 // 或者一键启动（预装常用插件）
 App app = LiteJava.create();  // 包含 Jackson + MemoryCache + HttpServer
+```
+
+**插件可随时替换，对业务代码零影响：**
+
+```java
+// 开发环境：用内置 HttpServer
+app.use(new HttpServerPlugin());
+
+// 生产环境：换成 Netty 高性能服务器
+app.use(new NettyServerPlugin());
+
+// 或者用虚拟线程版本 (Java 21+)
+app.use(new JdkVirtualThreadServerPlugin());
+```
+
+**有趣的工具插件，开发调试更轻松：**
+
+```java
+// DebugPlugin - 启动时打印应用结构
+app.use(new DebugPlugin());
+
+// 输出：
+// ╔══════════════════════════════════════════════════════════════╗
+// ║                      My Application                          ║
+// ╠══════════════════════════════════════════════════════════════╣
+// ║ Plugins (6):                                                 ║
+// ║   1. Slf4jLogPlugin                                          ║
+// ║   2. JacksonPlugin                                           ║
+// ║   3. HttpServerPlugin                                        ║
+// ╠══════════════════════════════════════════════════════════════╣
+// ║ Middleware Chain (2):                                        ║
+// ║   Request → [RecoveryPlugin] → [CorsPlugin] → Handler        ║
+// ╚══════════════════════════════════════════════════════════════╝
+```
+
+**配置也可以装在插件里：**
+
+```java
+// 默认：.properties 配置
+app.use(new ConfPlugin());           // app.conf.get("key")
+
+// 想用 YAML？换个插件
+app.use(new YamlConfPlugin());       // 同样的 API，不同的配置格式
+
+// 想从环境变量读取？自己写个插件
+app.use(new EnvConfPlugin());        // 插件机制让扩展变得简单
 ```
 
 ---
@@ -461,13 +509,71 @@ MyPlugin.instance.doSomething();
 - 需要 Spring 生态的特定功能
 - 企业级大型单体应用
 
-### vs Spring Boot
+### vs Spring Boot - 深度对比
+
+Spring Boot 确实解决了很多问题，但代价是什么？LiteJava 用更轻量的方式提供同样的能力：
+
+| Spring 解决的问题 | Spring 的方式 | LiteJava 的方式 |
+|------------------|--------------|----------------|
+| **依赖注入 (DI)** | `@Autowired` + 容器扫描，启动慢 | `GuicePlugin` 可选集成，或直接构造函数传参 |
+| **路由映射** | `@RequestMapping` 注解，分散在各类 | 代码集中定义 `app.get("/path", handler)` |
+| **配置管理** | `@Value` + `@ConfigurationProperties` | `ConfPlugin` 读取，`app.conf.get("key")` |
+| **数据库访问** | `@Repository` + Spring Data | `JdbcPlugin` / `MyBatisPlugin` 插件 |
+| **事务管理** | `@Transactional` 注解 | `JdbcPlugin.transaction(conn -> {...})` |
+| **缓存** | `@Cacheable` + 自动代理 | `RedisCachePlugin` 显式调用 |
+| **参数校验** | `@Valid` + `@NotNull` | `ValidationPlugin` 可选，代码校验同样简洁 |
+| **AOP 切面** | `@Aspect` + 动态代理 | 中间件 `app.use((ctx, next) -> {...})` |
+| **定时任务** | `@Scheduled` | `SchedulePlugin` 插件 |
+| **API 文档** | Springfox/SpringDoc 注解 | `SwaggerPlugin` 插件 |
+
+**关键区别：**
+
+- **Spring**：功能深度绑定框架，注解侵入业务代码，移除困难
+- **LiteJava**：功能以插件形式提供，对框架核心零侵入，随时可插拔
+
+```java
+// Spring 方式 - 注解侵入业务代码
+@RestController
+@RequestMapping("/users")
+public class UserController {
+    @Autowired private UserService userService;
+    @Autowired private CacheManager cache;
+    
+    @GetMapping("/{id}")
+    @Cacheable("users")
+    public User getUser(@PathVariable Long id) {
+        return userService.findById(id);
+    }
+}
+
+// LiteJava 方式 - 代码即配置，无侵入
+app.get("/users/:id", ctx -> {
+    long id = ctx.pathParamLong("id");
+    User user = cache.get("user:" + id, () -> userService.findById(id));
+    ctx.ok(user);
+});
+```
+
+**即使需要注解，LiteJava 也能通过插件无侵入地支持：**
+
+```java
+// 想用 JSR-330 依赖注入？加个插件
+app.use(new GuicePlugin());
+
+// 想用 Bean Validation？加个插件
+app.use(new ValidationPlugin());
+
+// 想用 JPA 注解？加个插件
+app.use(new JpaPlugin());
+
+// 不想用了？移除插件即可，业务代码无需改动
+```
 
 | | Spring Boot | LiteJava |
 |--|-------------|----------|
 | 理念 | 约定优于配置 | 代码即配置 |
 | 优势 | 企业级支持、社区成熟 | 轻量快速、代码透明、插件灵活 |
-| 劣势 | 臃肿、魔法多、启动慢 | 社区较新 |
+| 劣势 | 臃肿、魔法多、启动慢、注解侵入 | 社区较新 |
 
 ### vs Javalin
 
