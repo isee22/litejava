@@ -58,8 +58,14 @@ import io.jsonwebtoken.security.Keys;
 public class JwtPlugin extends Plugin {
     
     public static JwtPlugin instance;
+    
+    /** JWT 密钥（至少32字符） */
+    public String secret;
+    
+    /** Token 过期时间（毫秒），默认1小时 */
+    public long expireMs = 3600000;
+    
     private Key key;
-    public long expireMs = 3600000; // 1小时
     
     public JwtPlugin() {
         instance = this;
@@ -68,17 +74,20 @@ public class JwtPlugin extends Plugin {
     
     public JwtPlugin(String secret) {
         instance = this;
+        this.secret = secret;
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }
     
     @Override
     public void config() {
-        // 从配置加载
-        String secret = app.conf.getString("jwt", "secret", null);
+        // 集中加载配置
+        secret = app.conf.getString("jwt", "secret", secret);
+        expireMs = app.conf.getLong("jwt", "expireMs", expireMs);
+        
+        // 应用配置
         if (secret != null && !secret.isEmpty()) {
             this.key = Keys.hmacShaKeyFor(secret.getBytes());
         }
-        expireMs = app.conf.getLong("jwt", "expireMs", expireMs);
     }
     
     public String sign(Map<String, Object> claims) {

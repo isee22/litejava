@@ -63,6 +63,9 @@ public class AuthPlugin extends MiddlewarePlugin {
     /** 白名单前缀（前缀匹配） */
     public Set<String> whitelistPrefixes = new HashSet<>();
     
+    /** 白名单路径配置（逗号分隔，*结尾表示前缀匹配） */
+    public String whitelist;
+    
     /** 认证头名称，默认 Authorization */
     public String headerName = "Authorization";
     
@@ -109,10 +112,14 @@ public class AuthPlugin extends MiddlewarePlugin {
     
     @Override
     public void config() {
-        // 从配置文件读取白名单
-        String configWhitelist = app.conf.getString("auth", "whitelist", null);
-        if (configWhitelist != null && !configWhitelist.isEmpty()) {
-            for (String path : configWhitelist.split(",")) {
+        // 集中加载配置
+        whitelist = app.conf.getString("auth", "whitelist", whitelist);
+        headerName = app.conf.getString("auth", "headerName", headerName);
+        tokenPrefix = app.conf.getString("auth", "tokenPrefix", tokenPrefix);
+        
+        // 解析白名单配置
+        if (whitelist != null && !whitelist.isEmpty()) {
+            for (String path : whitelist.split(",")) {
                 path = path.trim();
                 if (path.endsWith("*")) {
                     whitelistPrefixes.add(path.substring(0, path.length() - 1));
@@ -121,10 +128,6 @@ public class AuthPlugin extends MiddlewarePlugin {
                 }
             }
         }
-        
-        // 从配置文件读取其他配置
-        headerName = app.conf.getString("auth", "headerName", headerName);
-        tokenPrefix = app.conf.getString("auth", "tokenPrefix", tokenPrefix);
     }
     
     @Override

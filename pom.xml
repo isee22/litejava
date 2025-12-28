@@ -16,7 +16,7 @@
         <module>litejava-core</module>
         <module>litejava-plugins</module>
         <module>litejava-plugins-vt</module>
-        <module>litejava-example</module>
+        <module>litejava-examples</module>
         <module>litejava-benchmark</module>
         <module>litejava-template</module>
     </modules>

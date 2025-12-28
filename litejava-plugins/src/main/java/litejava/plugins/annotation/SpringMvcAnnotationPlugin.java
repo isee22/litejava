@@ -1,4 +1,4 @@
-package litejava.plugins.route;
+package litejava.plugins.annotation;
 
 import litejava.Context;
 import litejava.Handler;
@@ -12,7 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Spring MVC 原生注解插件 - 使用 Spring 原生注解，无需 Spring 容器
+ * Spring MVC 注解路由插件 - 使用 Spring 原生注解，无需 Spring 容器
+ * 
+ * <p>轻量级实现，只解析 Spring MVC 注解并注册到 LiteJava 路由，
+ * 不依赖 Spring 容器和 DispatcherServlet。
  * 
  * <h2>依赖</h2>
  * <pre>{@code
@@ -24,126 +27,119 @@ import java.util.List;
  * }</pre>
  * 
  * <h2>配置</h2>
- * <pre>{@code
- * springmvc.packages=com.example.controller
- * }</pre>
+ * <pre>
+ * # application.yml
+ * springmvc:
+ *   packages: com.example.controller
+ * </pre>
  * 
  * <h2>使用示例</h2>
  * <pre>{@code
- * // 自动扫描
+ * // 方式一：自动扫描主类所在包
  * app.use(new SpringMvcPlugin(Main.class));
  * 
- * // Controller 定义 (Spring 原生注解)
+ * // 方式二：指定扫描包
+ * SpringMvcPlugin plugin = new SpringMvcPlugin();
+ * plugin.packages = "com.example.controller";
+ * app.use(plugin);
+ * 
+ * // Controller 定义（Spring 原生注解）
  * @RestController
  * @RequestMapping("/users")
  * public class UserController {
- *     
  *     @GetMapping
- *     public List<User> list() {
- *         return userService.list();
- *     }
+ *     public List<User> list() { return userService.list(); }
  *     
  *     @GetMapping("/{id}")
- *     public User get(@PathVariable Long id) {
- *         return userService.get(id);
- *     }
+ *     public User get(@PathVariable Long id) { return userService.get(id); }
  *     
  *     @PostMapping
- *     public User create(@RequestBody User user) {
- *         return userService.create(user);
- *     }
- *     
- *     @PutMapping("/{id}")
- *     public User update(@PathVariable Long id, @RequestBody User user) {
- *         return userService.update(id, user);
- *     }
- *     
- *     @DeleteMapping("/{id}")
- *     public void delete(@PathVariable Long id) {
- *         userService.delete(id);
- *     }
+ *     public User create(@RequestBody User user) { return userService.create(user); }
  * }
- * 
- * // 配合 Guice DI
- * GuicePlugin di = new GuicePlugin();
- * SpringMvcPlugin mvc = new SpringMvcPlugin(Main.class);
- * mvc.instanceProvider = di::get;
- * 
- * app.use(di);
- * app.use(mvc);
  * }</pre>
  * 
- * <h2>支持的注解 (Spring 原生)</h2>
+ * <h2>支持的注解</h2>
  * <ul>
- *   <li>{@code @RestController}, {@code @Controller}</li>
- *   <li>{@code @RequestMapping}</li>
+ *   <li>{@code @RestController}, {@code @Controller} - 控制器标记</li>
+ *   <li>{@code @RequestMapping} - 路径映射（类和方法级别）</li>
  *   <li>{@code @GetMapping}, {@code @PostMapping}, {@code @PutMapping}, {@code @DeleteMapping}, {@code @PatchMapping}</li>
- *   <li>{@code @PathVariable}, {@code @RequestParam}, {@code @RequestBody}, {@code @RequestHeader}</li>
+ *   <li>{@code @PathVariable} - 路径参数</li>
+ *   <li>{@code @RequestParam} - 查询参数</li>
+ *   <li>{@code @RequestBody} - 请求体</li>
+ *   <li>{@code @RequestHeader} - 请求头</li>
  * </ul>
  * 
- * <h2>vs SpringStylePlugin</h2>
- * <ul>
- *   <li>SpringStylePlugin - 自定义注解，零依赖</li>
- *   <li>SpringMvcPlugin - Spring 原生注解，需要 spring-web 依赖</li>
- * </ul>
+ * @see JaxRsAnnotationPlugin JAX-RS 注解支持
+ * @see JerseyRuntimePlugin 完整 JAX-RS 运行时
  */
-public class SpringMvcPlugin extends Plugin {
+public class SpringMvcAnnotationPlugin extends Plugin {
+
+    /** 是否启用自动扫描 classpath，默认 true */
+    public boolean autoScan = true;
     
     /** 默认实例（单例访问） */
-    public static SpringMvcPlugin instance;
+    public static SpringMvcAnnotationPlugin instance;
+    
+    /** 要扫描的包名，多个用逗号分隔 */
+    public String packages;
     
     /** 已注册的 Controller 类列表 */
     public List<Class<?>> controllers = new ArrayList<>();
     
-    /** 自定义实例创建器，可配合 DI 使用，如 di::get */
+    /** 自定义实例创建器，可配合 DI 使用 */
     public java.util.function.Function<Class<?>, Object> instanceProvider;
     
     /** 主类，用于自动检测扫描包 */
     public Class<?> mainClass;
     
-    public SpringMvcPlugin() {
+    public SpringMvcAnnotationPlugin() {
         instance = this;
     }
     
-    public SpringMvcPlugin(Class<?> mainClass) {
+    public SpringMvcAnnotationPlugin(Class<?> mainClass) {
         instance = this;
         this.mainClass = mainClass;
     }
     
     @Override
     public void config() {
-        String packages = app.conf.getString("springmvc", "packages", null);
-        if (packages != null) {
+        // 集中加载配置
+        packages = app.conf.getString("springmvc", "packages", packages);
+        autoScan = app.conf.getBool("springmvc", "autoScan", autoScan);
+        
+        // 1. 扫描配置的包
+        if (packages != null && !packages.isEmpty()) {
             for (String pkg : packages.split(",")) {
                 scanPackage(pkg.trim());
             }
         }
         
-        if (controllers.isEmpty() && packages == null) {
-            String basePackage = detectBasePackage();
-            if (basePackage != null) {
-                app.log.info("SpringMvcPlugin: Auto-scanning package '" + basePackage + "'");
-                scanPackage(basePackage);
-            }
+        // 2. 尝试扫描主类所在包
+        if (controllers.isEmpty() && mainClass != null) {
+            String basePackage = mainClass.getPackage().getName();
+            app.log.info("SpringMvcAnnotationPlugin: Scanning package '" + basePackage + "'");
+            scanPackage(basePackage);
         }
         
-        if (controllers.isEmpty()) {
-            app.log.warn("SpringMvcPlugin: No @RestController/@Controller found.");
+        // 3. 自动扫描整个 classpath
+        if (controllers.isEmpty() && autoScan) {
+            app.log.info("SpringMvcAnnotationPlugin: Auto-scanning classpath for @RestController/@Controller...");
+            scanClasspath();
         }
         
         for (Class<?> clazz : controllers) {
             registerController(clazz);
         }
         
-        app.log.info("SpringMvcPlugin registered " + controllers.size() + " controller(s)");
+        app.log.info("SpringMvcAnnotationPlugin: Registered " + controllers.size() + " controller(s)");
     }
     
-    public SpringMvcPlugin register(Class<?> controllerClass) {
+    public SpringMvcAnnotationPlugin register(Class<?> controllerClass) {
         controllers.add(controllerClass);
         return this;
     }
     
-    public SpringMvcPlugin scanPackage(String packageName) {
+    public SpringMvcAnnotationPlugin scanPackage(String packageName) {
         try {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             String path = packageName.replace('.', '/');
@@ -162,34 +158,87 @@ public class SpringMvcPlugin extends Plugin {
         return this;
     }
     
-    private void scanDirectory(java.io.File dir, String packageName) throws Exception {
+    private void scanDirectory(java.io.File dir, String packageName) {
         java.io.File[] files = dir.listFiles();
         if (files == null) return;
         
         for (java.io.File file : files) {
+            String name = file.getName();
             if (file.isDirectory()) {
-                scanDirectory(file, packageName + "." + file.getName());
-            } else if (file.getName().endsWith(".class")) {
-                String className = packageName + "." + file.getName().replace(".class", "");
-                Class<?> clazz = Class.forName(className);
-                if (clazz.isAnnotationPresent(RestController.class) || 
-                    clazz.isAnnotationPresent(Controller.class)) {
-                    controllers.add(clazz);
-                }
+                String subPackage = packageName.isEmpty() ? name : packageName + "." + name;
+                scanDirectory(file, subPackage);
+            } else if (name.endsWith(".class") && !name.contains("$")) {
+                String className = packageName.isEmpty() ? 
+                    name.replace(".class", "") : 
+                    packageName + "." + name.replace(".class", "");
+                tryRegisterClass(className);
             }
         }
     }
     
-    private String detectBasePackage() {
-        if (mainClass != null) return mainClass.getPackage().getName();
+    private void scanClasspath() {
         try {
-            for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
-                if (e.getMethodName().equals("main")) {
-                    return Class.forName(e.getClassName()).getPackage().getName();
+            ClassLoader cl = Thread.currentThread().getContextClassLoader();
+            java.util.Enumeration<java.net.URL> urls = cl.getResources("");
+
+            while (urls.hasMoreElements()) {
+                java.net.URL url = urls.nextElement();
+                if ("file".equals(url.getProtocol())) {
+                    scanDirectory(new java.io.File(url.toURI()), "");
                 }
             }
-        } catch (Exception ignored) {}
-        return null;
+
+            // 扫描 JAR 文件
+            String classpath = System.getProperty("java.class.path");
+            if (classpath != null) {
+                for (String path : classpath.split(java.io.File.pathSeparator)) {
+                    if (path.endsWith(".jar")) {
+                        scanJarFile(new java.io.File(path));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            app.log.warn("Failed to scan classpath: " + e.getMessage());
+        }
+    }
+    
+    private void scanJarFile(java.io.File jarFile) {
+        if (!jarFile.exists()) return;
+
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(jarFile)) {
+            java.util.Enumeration<java.util.jar.JarEntry> entries = jar.entries();
+
+            while (entries.hasMoreElements()) {
+                java.util.jar.JarEntry entry = entries.nextElement();
+                String name = entry.getName();
+
+                if (!name.endsWith(".class") || name.contains("$")) continue;
+                // 跳过框架和常见库
+                if (name.startsWith("java/") || name.startsWith("javax/") || 
+                    name.startsWith("sun/") || name.startsWith("com/sun/") ||
+                    name.startsWith("org/springframework/") || name.startsWith("org/apache/") ||
+                    name.startsWith("com/fasterxml/") || name.startsWith("io/netty/") ||
+                    name.startsWith("litejava/")) continue;
+
+                String className = name.replace('/', '.').replace(".class", "");
+                tryRegisterClass(className);
+            }
+        } catch (Exception e) {
+            // ignore invalid jars
+        }
+    }
+    
+    private void tryRegisterClass(String className) {
+        try {
+            Class<?> clazz = Class.forName(className, false, 
+                Thread.currentThread().getContextClassLoader());
+            if (clazz.isAnnotationPresent(RestController.class) || 
+                clazz.isAnnotationPresent(Controller.class)) {
+                controllers.add(clazz);
+            }
+        } catch (Throwable e) {
+            // ignore classes that can't be loaded
+        }
     }
 
     private void registerController(Class<?> clazz) {
@@ -293,7 +342,6 @@ public class SpringMvcPlugin extends Plugin {
     }
     
     private Object resolveParameter(Context ctx, Parameter param) {
-        // @PathVariable
         PathVariable pv = param.getAnnotation(PathVariable.class);
         if (pv != null) {
             String name = pv.value().isEmpty() ? pv.name() : pv.value();
@@ -301,7 +349,6 @@ public class SpringMvcPlugin extends Plugin {
             return convertValue(ctx.pathParam(name), param.getType());
         }
         
-        // @RequestParam
         RequestParam rp = param.getAnnotation(RequestParam.class);
         if (rp != null) {
             String name = rp.value().isEmpty() ? rp.name() : rp.value();
@@ -313,7 +360,6 @@ public class SpringMvcPlugin extends Plugin {
             return convertValue(value, param.getType());
         }
         
-        // @RequestHeader
         RequestHeader rh = param.getAnnotation(RequestHeader.class);
         if (rh != null) {
             String name = rh.value().isEmpty() ? rh.name() : rh.value();
@@ -321,12 +367,10 @@ public class SpringMvcPlugin extends Plugin {
             return convertValue(ctx.header(name), param.getType());
         }
         
-        // @RequestBody
         if (param.isAnnotationPresent(RequestBody.class)) {
             return ctx.bind(param.getType());
         }
         
-        // Context 参数
         if (param.getType() == Context.class) {
             return ctx;
         }

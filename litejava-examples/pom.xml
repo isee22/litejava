@@ -10,13 +10,16 @@
         <version>1.0.0-jdk8</version>
     </parent>
 
-    <artifactId>litejava-example</artifactId>
+    <artifactId>litejava-examples</artifactId>
     <packaging>pom</packaging>
 
     <name>LiteJava Examples</name>
     <description>Example projects demonstrating LiteJava framework</description>
 
     <modules>
+        <module>litejava-example-jaxrsAnnotation</module>
+        <module>litejava-example-jerseyAnnotation</module>
+        <module>litejava-example-springmvcAnnotation</module>
         <module>litejava-example-jdbc</module>
         <module>litejava-example-jpa</module>
         <module>litejava-example-mybatis</module>
