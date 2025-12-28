@@ -26,24 +26,6 @@ public class Routes {
     
     public final List<Route> routes = new ArrayList<>();
     
-    /** @deprecated Use routes instead */
-    @Deprecated
-    public final List<Entry> entries = new ArrayList<>();
-    
-    /** @deprecated Use Route instead */
-    @Deprecated
-    public static class Entry {
-        public String method;
-        public String path;
-        public Handler handler;
-        
-        public Entry(String method, String path, Handler handler) {
-            this.method = method;
-            this.path = path;
-            this.handler = handler;
-        }
-    }
-    
     public RouteBuilder get(String path, Handler handler) {
         return add("GET", path, handler);
     }
@@ -71,7 +53,6 @@ public class Routes {
     private RouteBuilder add(String method, String path, Handler handler) {
         Route route = new Route(method, path, handler);
         routes.add(route);
-        entries.add(new Entry(method, path, handler)); // 兼容旧代码
         return new RouteBuilder(this, route);
     }
     

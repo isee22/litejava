@@ -181,29 +181,21 @@ public class RouterPlugin extends Plugin {
     // ==================== 批量注册 ====================
     
     public RouterPlugin register(Routes routes) {
-        // 优先使用新的 routes 列表（包含元数据）
-        if (!routes.routes.isEmpty()) {
-            for (Route r : routes.routes) {
-                String fullPath = normalizePath(prefix + r.path);
-                RouterPlugin root = getRoot();
-                root.tree.add(fullPath, r.handler, r.method);
-                
-                // 复制路由并更新路径
-                Route newRoute = new Route(r.method, fullPath, r.handler);
-                newRoute.summary = r.summary;
-                newRoute.description = r.description;
-                newRoute.tags = r.tags;
-                newRoute.params = r.params;
-                newRoute.responses = r.responses;
-                newRoute.requestBody = r.requestBody;
-                newRoute.requestBodyDesc = r.requestBodyDesc;
-                root.routes.add(newRoute);
-            }
-        } else {
-            // 兼容旧代码
-            for (Routes.Entry entry : routes.entries) {
-                route(entry.method, entry.path, entry.handler);
-            }
+        for (Route r : routes.routes) {
+            String fullPath = normalizePath(prefix + r.path);
+            RouterPlugin root = getRoot();
+            root.tree.add(fullPath, r.handler, r.method);
+            
+            // 复制路由并更新路径
+            Route newRoute = new Route(r.method, fullPath, r.handler);
+            newRoute.summary = r.summary;
+            newRoute.description = r.description;
+            newRoute.tags = r.tags;
+            newRoute.params = r.params;
+            newRoute.responses = r.responses;
+            newRoute.requestBody = r.requestBody;
+            newRoute.requestBodyDesc = r.requestBodyDesc;
+            root.routes.add(newRoute);
         }
         return this;
     }
