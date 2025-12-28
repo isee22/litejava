@@ -5,6 +5,7 @@ import example.service.UserService;
 import litejava.Context;
 import litejava.exception.LiteJavaException;
 import litejava.plugins.schedule.Scheduled;
+import litejava.util.Maps;
 import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
@@ -26,7 +27,7 @@ public class UserController {
         int page = ctx.queryParamInt("page", 1);
         int size = ctx.queryParamInt("size", 10);
         List<User> users = userService.findAll();
-        return Map.of("list", users, "page", page, "size", size, "total", users.size());
+        return Maps.of("list", users, "page", page, "size", size, "total", users.size());
     }
     
     @GetMapping("/{id}")
@@ -45,7 +46,7 @@ public class UserController {
         }
         User created = userService.create(user);
         ctx.status(201);
-        return Map.of("data", created, "msg", "Created");
+        return Maps.of("data", created, "msg", "Created");
     }
     
     @PutMapping("/{id}")
@@ -64,7 +65,7 @@ public class UserController {
         if (!ok) {
             throw new LiteJavaException("User not found: " + id, 404);
         }
-        return Map.of("success", true);
+        return Maps.of("success", true);
     }
     
     /**

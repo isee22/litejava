@@ -28,6 +28,13 @@
             <version>5.3.31</version>
         </dependency>
         
+        <!-- Spring Context (for @Cacheable) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>5.3.31</version>
+        </dependency>
+        
         <!-- Spring JDBC -->
         <dependency>
             <groupId>org.springframework</groupId>

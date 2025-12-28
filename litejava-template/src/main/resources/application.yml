@@ -18,13 +18,17 @@ plugins:
     directory: static
     cacheMaxAge: 86400
 
-# MyBatis 数据库配置
-mybatis:
+# 数据源配置
+datasource:
   url: jdbc:mysql://localhost:3306/litejava?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
   username: root
   password: 123456
+  pool:
+    maxSize: 10
+
+# MyBatis 配置
+mybatis:
   mapperPackage: com.example.mapper
-  poolMaxSize: 10
 
 # Thymeleaf 模板配置
 view:

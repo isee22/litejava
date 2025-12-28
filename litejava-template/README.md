@@ -22,7 +22,7 @@ mysql -u root -p < src/main/resources/schema.sql
 编辑 `src/main/resources/application.yml`：
 
 ```yaml
-db:
+datasource:
   url: jdbc:mysql://localhost:3306/litejava
   username: root
   password: 123456

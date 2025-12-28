@@ -20,17 +20,17 @@
 ```java
 import litejava.*;
 import litejava.plugins.LiteJava;
-import java.util.*;
+import litejava.util.Maps;
 
 public class Main {
     public static void main(String[] args) {
         App app = LiteJava.create();
         
-        app.get("/", ctx -> ctx.json(Map.of("message", "Hello, LiteJava!")));
+        app.get("/", ctx -> ctx.json(Maps.of("message", "Hello, LiteJava!")));
         
         app.get("/users/:id", ctx -> {
             long id = ctx.pathParamLong("id");
-            ctx.json(Map.of("id", id, "name", "User " + id));
+            ctx.json(Maps.of("id", id, "name", "User " + id));
         });
         
         app.run();  // 启动！访问 http://localhost:8080
@@ -239,7 +239,7 @@ public class BookApp {
                 List<Map<String, Object>> list = jdbc.jdbcTemplate.queryForList(
                     "SELECT * FROM books LIMIT ? OFFSET ?", size, (page - 1) * size
                 );
-                ctx.ok(Map.of("data", list, "page", page, "size", size));
+                ctx.ok(Maps.of("data", list, "page", page, "size", size));
             });
             
             books.get("/:id", ctx -> {
@@ -282,8 +282,8 @@ public class UserService {
         // 公开接口
         app.post("/auth/login", ctx -> {
             Map<String, Object> body = ctx.bindJSON();
-            String token = JwtPlugin.instance.sign(Map.of("userId", 123));
-            ctx.ok(Map.of("token", token));
+            String token = JwtPlugin.instance.sign(Maps.of("userId", 123));
+            ctx.ok(Maps.of("token", token));
         });
         
         // 需要认证的接口
@@ -298,7 +298,7 @@ public class UserService {
             api.put("/me", ctx -> {
                 // 参数校验
                 Map<String, Object> body = ctx.bindJSON();
-                ValidationPlugin.instance.validate(body, Map.of(
+                ValidationPlugin.instance.validate(body, Maps.of(
                     "name", "required|min:2|max:50",
                     "email", "required|email"
                 ));

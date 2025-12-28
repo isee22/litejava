@@ -52,6 +52,6 @@
 
 ```java
 App app = LiteJava.create();
-app.get("/", ctx -> ctx.json(Map.of("msg", "Hello")));
+app.get("/", ctx -> ctx.json(Maps.of("msg", "Hello")));
 app.run();
 ```

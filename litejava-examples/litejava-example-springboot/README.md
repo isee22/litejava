@@ -6,7 +6,7 @@
 
 | 方式 | 启动类 | 说明 |
 |------|--------|------|
-| 代码配置 | `SpringBootApp` | 代码中显式 `app.use(plugin)` |
+| 代码配置 | `SpringBootApp` | 代码中显式 `app.use(plugin)`，包含 Spring Cache |
 | 纯配置 | `SpringBootConfApp` | 通过 `application.yml` 的 `plugins` 节点配置 |
 
 ## Spring Boot vs LiteJava 对照表
@@ -17,7 +17,8 @@
 | **依赖注入** | Spring DI (@Autowired) | Guice (@Inject) |
 | **ORM** | Spring Data JPA / MyBatis | `MyBatisPlugin` / `HibernatePlugin` |
 | **数据源** | HikariCP (内置) | `HikariPlugin` / `DruidPlugin` |
-| **缓存** | Spring Cache | `MemoryCachePlugin` / `RedisPlugin` |
+| **缓存** | Spring Cache (@Cacheable) | `SpringCachePlugin` |
+| **缓存后端** | Redis/Caffeine | `MemoryCachePlugin` / `RedisCachePlugin` |
 | **定时任务** | @Scheduled | `SchedulePlugin` (Quartz) |
 | **模板引擎** | Thymeleaf | `ThymeleafPlugin` |
 | **异常处理** | @ControllerAdvice | `RecoveryPlugin` |
@@ -28,20 +29,18 @@
 
 ```
 src/main/java/example/
-├── SpringBootApp.java       # 启动类
-├── config/
-│   └── AppModule.java       # Guice DI 配置
+├── SpringBootApp.java       # 启动类（代码配置，含 Spring Cache）
+├── SpringBootConfApp.java   # 启动类（纯配置）
 ├── controller/
 │   ├── UserController.java  # REST API (@RestController)
 │   └── PageController.java  # 页面渲染 + 重定向
 ├── service/
-│   └── UserService.java     # 业务逻辑 (@Singleton)
+│   ├── UserService.java     # 业务逻辑（手动缓存）
+│   └── CachedUserService.java # 业务逻辑（@Cacheable 注解）
 ├── mapper/
 │   └── UserMapper.java      # MyBatis Mapper
-├── model/
-│   └── User.java            # 实体类 (public 字段)
-└── scheduler/
-    └── TaskScheduler.java   # 定时任务
+└── model/
+    └── User.java            # 实体类 (public 字段)
 
 src/main/resources/
 ├── application.yml          # 配置文件
@@ -65,8 +64,14 @@ app.use(new ThymeleafPlugin("templates/"));
 app.use(new HikariPlugin());
 app.use(new MyBatisPlugin(hikari, UserMapper.class));
 
-// 缓存
-app.use(new MemoryCachePlugin());
+// 缓存（手动调用方式）
+MemoryCachePlugin memoryCache = new MemoryCachePlugin();
+app.use(memoryCache);
+
+// Spring Cache（支持 @Cacheable 注解）
+SpringCachePlugin springCache = new SpringCachePlugin(memoryCache);
+springCache.cacheNames = Arrays.asList("users", "products");
+app.use(springCache);
 
 // 定时任务
 app.use(new SchedulePlugin());
@@ -78,6 +83,38 @@ springMvc.packages = "example.controller";
 app.use(springMvc);
 
 app.run();
+```
+
+### Spring Cache 注解示例
+```java
+@Singleton
+public class CachedUserService {
+    
+    @Inject
+    public UserMapper userMapper;
+    
+    // 自动缓存查询结果
+    @Cacheable(value = "users", key = "#id")
+    public User findById(Long id) {
+        return userMapper.findById(id);
+    }
+    
+    // 更新时同步更新缓存
+    @CachePut(value = "users", key = "#user.id")
+    public User update(User user) {
+        userMapper.update(user);
+        return user;
+    }
+    
+    // 删除时清除缓存
+    @CacheEvict(value = "users", key = "#id")
+    public void delete(Long id) {
+        userMapper.delete(id);
+    }
+}
+
+// 使用时通过 SpringCachePlugin 代理
+CachedUserService service = springCache.proxy(CachedUserService.class);
 ```
 
 ### Controller (Spring MVC 注解)
@@ -92,7 +129,7 @@ public class UserController {
     @GetMapping
     public Map<String, Object> list(Context ctx) {
         int page = ctx.queryInt("page", 1);
-        return Map.of("list", userService.findAll());
+        return Maps.of("list", userService.findAll());
     }
     
     @GetMapping("/{id}")

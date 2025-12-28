@@ -65,12 +65,15 @@
 | 插件 | 状态 | 依赖 | 说明 |
 |------|------|------|------|
 | YamlConfPlugin | ✅ | SnakeYAML | YAML 配置，支持多环境 |
+| NacosConfigPlugin | ✅ | Nacos | Nacos 配置中心 |
+| ApolloConfigPlugin | ✅ | Apollo | Apollo 配置中心 |
 
 ### JSON (json/)
 
 | 插件 | 状态 | 依赖 | 说明 |
 |------|------|------|------|
 | JacksonPlugin | ✅ | Jackson | JSON 序列化/反序列化 |
+| GoJsonPlugin | ✅ | - | Go 风格 JSON 操作 |
 
 ### 日志 (log/)
 
@@ -99,10 +102,11 @@
 
 | 插件 | 状态 | 依赖 | 说明 |
 |------|------|------|------|
-| CachePlugin | ✅ | - | 缓存基类 |
 | MemoryCachePlugin | ✅ | - | 内存缓存（ConcurrentHashMap） |
 | RedisCachePlugin | ✅ | Jedis | Redis 缓存，支持 Hash/List/Set |
+| RedisPlugin | ✅ | Jedis | Redis 客户端（底层） |
 | MemcacheCachePlugin | ✅ | spymemcached | Memcached 缓存 |
+| SpringCachePlugin | ✅ | Spring Context | 支持 @Cacheable/@CacheEvict 注解 |
 
 ### 安全 (security/)
 
@@ -115,7 +119,7 @@
 | SessionPlugin | ✅ | - | Session 管理 |
 | CsrfPlugin | ✅ | - | CSRF 防护 |
 | RateLimitPlugin | ✅ | - | 限流中间件 |
-| OAuth2Plugin | 🚧 | - | OAuth2 认证（基础实现） |
+| OAuth2Plugin | ✅ | - | OAuth2 认证（GitHub/Google） |
 
 ### HTTP (http/)
 
@@ -230,6 +234,42 @@
 |------|------|------|------|
 | HotReloadPlugin | ✅ | - | 开发模式热重载 |
 
+### 集群 (cluster/)
+
+| 插件 | 状态 | 依赖 | 说明 |
+|------|------|------|------|
+| RedisSessionPlugin | ✅ | Jedis | Redis 分布式 Session |
+
+### 服务发现 (discovery/)
+
+| 插件 | 状态 | 依赖 | 说明 |
+|------|------|------|------|
+| ConsulPlugin | ✅ | Consul | Consul 服务注册与发现 |
+| EurekaPlugin | ✅ | Netflix Eureka | Eureka 服务发现 |
+| ZookeeperPlugin | ✅ | Curator | Zookeeper 服务注册与协调 |
+
+### 消息队列 (mq/)
+
+| 插件 | 状态 | 依赖 | 说明 |
+|------|------|------|------|
+| KafkaPlugin | ✅ | Kafka | Kafka 消息队列 |
+| RabbitMQPlugin | ✅ | RabbitMQ | RabbitMQ 消息队列 |
+| RocketMQPlugin | ✅ | RocketMQ | RocketMQ 消息队列 |
+
+### 全文搜索 (search/)
+
+| 插件 | 状态 | 依赖 | 说明 |
+|------|------|------|------|
+| ElasticsearchPlugin | ✅ | Elasticsearch | Elasticsearch 搜索 |
+
+### 文件存储 (storage/)
+
+| 插件 | 状态 | 依赖 | 说明 |
+|------|------|------|------|
+| S3Plugin | ✅ | AWS SDK | AWS S3 存储 |
+| OssPlugin | ✅ | Aliyun SDK | 阿里云 OSS 存储 |
+| MinioPlugin | ✅ | MinIO | MinIO 对象存储 |
+
 ---
 
 ## 三、虚拟线程模块 (litejava-plugins-vt)
@@ -290,14 +330,7 @@ Java 21+ 虚拟线程支持。
 
 ## 五、待开发功能
 
-| 功能 | 优先级 | 说明 |
-|------|--------|------|
-| 集群支持 | 中 | 多实例部署、Session 共享 |
-| 配置中心 | 中 | Nacos/Apollo 集成 |
-| 服务发现 | 低 | Consul/Eureka 集成 |
-| 消息队列 | 中 | Kafka/RabbitMQ 插件 |
-| 全文搜索 | 低 | Elasticsearch 插件 |
-| 文件存储 | 中 | S3/OSS 插件 |
+暂无
 
 ---
 

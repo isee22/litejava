@@ -362,6 +362,92 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- MinioPlugin (MinIO Object Storage) -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.7</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- RocketMQPlugin (Message Queue) -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-client</artifactId>
+            <version>5.1.4</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ApolloConfigPlugin (Config Center) -->
+        <dependency>
+            <groupId>com.ctrip.framework.apollo</groupId>
+            <artifactId>apollo-client</artifactId>
+            <version>2.2.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- EurekaPlugin (Netflix Eureka Client 1.x) -->
+        <dependency>
+            <groupId>com.netflix.eureka</groupId>
+            <artifactId>eureka-client</artifactId>
+            <version>1.10.18</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ZookeeperPlugin (Curator) -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>5.5.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>5.5.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-x-discovery</artifactId>
+            <version>5.5.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- gRPC Plugin -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.60.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>1.60.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>1.60.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- OpenTelemetry (Tracing) -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+            <version>1.33.0</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+            <version>1.33.0</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
