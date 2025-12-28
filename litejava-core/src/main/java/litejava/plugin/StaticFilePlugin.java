@@ -159,8 +159,15 @@ public class StaticFilePlugin extends Plugin {
     
     private byte[] readFromFileSystem(String relativePath) {
         try {
+            System.out.println("[StaticFile] directory: " + directory);
+            System.out.println("[StaticFile] relativePath: " + relativePath);
+            
             Path basePath = Paths.get(directory).toAbsolutePath().normalize();
             Path filePath = basePath.resolve(relativePath).normalize();
+            
+            System.out.println("[StaticFile] basePath: " + basePath);
+            System.out.println("[StaticFile] filePath: " + filePath);
+            System.out.println("[StaticFile] exists: " + filePath.toFile().exists());
             
             // 确保路径在目录内
             if (!filePath.startsWith(basePath)) {
@@ -171,7 +178,7 @@ public class StaticFilePlugin extends Plugin {
                 return Files.readAllBytes(file.toPath());
             }
         } catch (Exception e) {
-            // ignore
+            e.printStackTrace();
         }
         return null;
     }
