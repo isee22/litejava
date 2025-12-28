@@ -11,23 +11,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * RecoveryPlugin 测试
+ * ExceptionPlugin 测试
  */
-class RecoveryPluginTest {
+class ExceptionPluginTest {
     
     @Test
     void testCatchException() throws Exception {
-        // 模拟 Context
         Context ctx = createContext();
         AtomicBoolean caught = new AtomicBoolean(false);
         
-        RecoveryPlugin recovery = new RecoveryPlugin((c, e) -> {
+        ExceptionPlugin plugin = new ExceptionPlugin((c, e) -> {
             caught.set(true);
-            c.status(500).json(Map.of("error", e.getMessage()));
+            c.status(500).json(java.util.Collections.singletonMap("error", e.getMessage()));
         });
         
-        // 执行会抛异常的 next
-        recovery.handle(ctx, () -> {
+        plugin.handle(ctx, () -> {
             throw new RuntimeException("测试异常");
         });
         
@@ -40,9 +38,9 @@ class RecoveryPluginTest {
         Context ctx = createContext();
         AtomicBoolean nextCalled = new AtomicBoolean(false);
         
-        RecoveryPlugin recovery = new RecoveryPlugin();
+        ExceptionPlugin plugin = new ExceptionPlugin();
         
-        recovery.handle(ctx, () -> {
+        plugin.handle(ctx, () -> {
             nextCalled.set(true);
             ctx.ok("success");
         });
@@ -52,15 +50,16 @@ class RecoveryPluginTest {
     }
     
     @Test
-    void testWithStack() throws Exception {
+    void testShowStack() throws Exception {
         Context ctx = createContext();
         ctx.app = new App();
         ctx.app.devMode = false;
         ctx.app.json = new SimpleJsonPlugin();
         
-        RecoveryPlugin recovery = RecoveryPlugin.withStack();
+        ExceptionPlugin plugin = new ExceptionPlugin();
+        plugin.showStack = true;
         
-        recovery.handle(ctx, () -> {
+        plugin.handle(ctx, () -> {
             throw new IllegalArgumentException("参数错误");
         });
         

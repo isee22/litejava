@@ -153,16 +153,17 @@ public class StaticFilePlugin extends Plugin {
         String mimeType = MIME_TYPES.getOrDefault(ext, "application/octet-stream");
         
         ctx.status(200)
-           .header("Content-Type", mimeType)
            .header("Cache-Control", "public, max-age=" + cacheMaxAge)
-           .data(content);
+           .data(content, mimeType);
     }
     
     private byte[] readFromFileSystem(String relativePath) {
         try {
-            Path filePath = Paths.get(directory, relativePath).normalize();
+            Path basePath = Paths.get(directory).toAbsolutePath().normalize();
+            Path filePath = basePath.resolve(relativePath).normalize();
+            
             // 确保路径在目录内
-            if (!filePath.startsWith(Paths.get(directory).normalize())) {
+            if (!filePath.startsWith(basePath)) {
                 return null;
             }
             File file = filePath.toFile();

@@ -125,7 +125,7 @@
 
 | 插件 | 状态 | 依赖 | 说明 |
 |------|------|------|------|
-| RecoveryPlugin | ✅ | - | 异常恢复中间件 |
+| ExceptionPlugin | ✅ | - | 异常恢复中间件 |
 | GzipPlugin | ✅ | - | Gzip 压缩 |
 | RequestIdPlugin | ✅ | - | 请求 ID 生成 |
 | SsePlugin | ✅ | - | Server-Sent Events |

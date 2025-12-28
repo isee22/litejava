@@ -31,7 +31,7 @@ guice:
 # ============================================
 # plugins:
 #   # 全局异常处理
-#   litejava_plugins_http_RecoveryPlugin:
+#   litejava_plugins_http_ExceptionPlugin:
 #     enabled: true
 #     showStack: true
 #   

@@ -197,7 +197,7 @@ app.use(new DebugPlugin());
 // ║   3. HttpServerPlugin                                        ║
 // ╠══════════════════════════════════════════════════════════════╣
 // ║ Middleware Chain (2):                                        ║
-// ║   Request → [RecoveryPlugin] → [CorsPlugin] → Handler        ║
+// ║   Request → [ExceptionPlugin] → [CorsPlugin] → Handler        ║
 // ╚══════════════════════════════════════════════════════════════╝
 ```
 

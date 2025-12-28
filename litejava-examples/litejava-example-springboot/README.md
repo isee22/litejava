@@ -21,7 +21,7 @@
 | **缓存后端** | Redis/Caffeine | `MemoryCachePlugin` / `RedisCachePlugin` |
 | **定时任务** | @Scheduled | `SchedulePlugin` (Quartz) |
 | **模板引擎** | Thymeleaf | `ThymeleafPlugin` |
-| **异常处理** | @ControllerAdvice | `RecoveryPlugin` |
+| **异常处理** | @ControllerAdvice | `ExceptionPlugin` |
 | **配置文件** | application.yml | `YamlConfPlugin` (LiteJava.create() 自带) |
 | **JSON** | Jackson (内置) | `JacksonPlugin` (LiteJava.create() 自带) |
 
@@ -55,7 +55,7 @@ src/main/resources/
 App app = LiteJava.create();
 
 // 全局异常处理
-app.use(RecoveryPlugin.withStack());
+app.use(ExceptionPlugin.withStack());
 
 // 模板引擎
 app.use(new ThymeleafPlugin("templates/"));
@@ -232,7 +232,7 @@ scheduler:
 
 # 纯配置方式启动时使用
 plugins:
-  litejava_plugins_http_RecoveryPlugin:
+  litejava_plugins_http_ExceptionPlugin:
     enabled: true
     showStack: true
   litejava_plugins_view_ThymeleafPlugin:

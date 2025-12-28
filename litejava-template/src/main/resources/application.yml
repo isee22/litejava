@@ -11,7 +11,7 @@ plugins:
   litejava_plugins_DebugPlugin: true
   litejava_plugins_health_HealthPlugin: true
   litejava_plugins_security_CorsPlugin: true
-  litejava_plugins_http_RecoveryPlugin: true
+  litejava_plugins_http_ExceptionPlugin: true
   litejava_plugin_StaticFilePlugin:
     enabled: true
     urlPrefix: /static

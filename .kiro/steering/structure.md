@@ -32,7 +32,7 @@ litejava/
         ├── database/            # JdbcPlugin, MyBatisPlugin, JpaPlugin
         ├── cache/               # RedisCachePlugin, MemcacheCachePlugin
         ├── view/                # ThymeleafPlugin, FreemarkerPlugin
-        ├── http/                # CorsPlugin, RecoveryPlugin
+        ├── http/                # CorsPlugin, ExceptionPlugin
         ├── health/              # HealthPlugin
         ├── annotation/          # JaxRsAnnotationPlugin, SpringMvcAnnotationPlugin
         └── server/              # NettyServerPlugin, UndertowServerPlugin

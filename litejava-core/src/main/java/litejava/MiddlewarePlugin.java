@@ -83,7 +83,7 @@ package litejava;
  * <h2>注册中间件（按注册顺序执行，与 Gin 一致）</h2>
  * <pre>{@code
  * // 推荐顺序：
- * app.use(new RecoveryPlugin());     // 1. 异常恢复（最外层）
+ * app.use(new ExceptionPlugin());     // 1. 异常恢复（最外层）
  * app.use(new RequestLogPlugin());   // 2. 请求日志
  * app.use(new CorsPlugin());         // 3. 跨域处理
  * app.use(new AuthPlugin(...));      // 4. 认证

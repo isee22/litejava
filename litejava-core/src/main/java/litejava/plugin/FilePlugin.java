@@ -347,41 +347,86 @@ public class FilePlugin extends Plugin {
             boundary = boundary.substring(1, boundary.length() - 1);
         }
         
-        // 解析各部分
+        // 使用字节数组解析，避免字符串转换损坏二进制数据
         byte[] bodyBytes = ctx.getRawData();
-        String bodyStr = new String(bodyBytes, Context.charset);
+        byte[] boundaryBytes = ("--" + boundary).getBytes(Context.charset);
         
-        for (String part : bodyStr.split("--" + boundary)) {
-            if (part.trim().isEmpty() || part.equals("--")) continue;
-            parseMultipartPart(part, bodyBytes, result);
+        int pos = 0;
+        while (pos < bodyBytes.length) {
+            // 找到 boundary 开始位置
+            int boundaryStart = indexOf(bodyBytes, boundaryBytes, pos);
+            if (boundaryStart < 0) break;
+            
+            // 跳过 boundary
+            int partStart = boundaryStart + boundaryBytes.length;
+            if (partStart >= bodyBytes.length) break;
+            
+            // 检查是否是结束标记 --boundary--
+            if (partStart + 2 <= bodyBytes.length && 
+                bodyBytes[partStart] == '-' && bodyBytes[partStart + 1] == '-') {
+                break;
+            }
+            
+            // 跳过 CRLF
+            if (partStart < bodyBytes.length && bodyBytes[partStart] == '\r') partStart++;
+            if (partStart < bodyBytes.length && bodyBytes[partStart] == '\n') partStart++;
+            
+            // 找到下一个 boundary（作为当前 part 的结束）
+            int nextBoundary = indexOf(bodyBytes, boundaryBytes, partStart);
+            if (nextBoundary < 0) nextBoundary = bodyBytes.length;
+            
+            // 解析这个 part
+            parseMultipartPartBytes(bodyBytes, partStart, nextBoundary, result);
+            
+            pos = nextBoundary;
         }
         
         return result;
     }
     
     /**
-     * 解析单个 multipart 部分
+     * 在字节数组中查找子数组
      */
-    private void parseMultipartPart(String part, byte[] fullBody, 
-                                     Map<String, List<UploadedFile>> result) {
-        int headerEnd = part.indexOf("\r\n\r\n");
-        if (headerEnd < 0) headerEnd = part.indexOf("\n\n");
-        if (headerEnd < 0) return;
-        
-        String headerSection = part.substring(0, headerEnd);
-        String content = part.substring(headerEnd + (part.contains("\r\n\r\n") ? 4 : 2));
-        
-        // 去除尾部边界标记
-        if (content.endsWith("--\r\n") || content.endsWith("--\n")) {
-            content = content.substring(0, content.lastIndexOf("--"));
+    private int indexOf(byte[] data, byte[] pattern, int start) {
+        outer:
+        for (int i = start; i <= data.length - pattern.length; i++) {
+            for (int j = 0; j < pattern.length; j++) {
+                if (data[i + j] != pattern[j]) {
+                    continue outer;
+                }
+            }
+            return i;
         }
-        if (content.endsWith("\r\n")) {
-            content = content.substring(0, content.length() - 2);
-        } else if (content.endsWith("\n")) {
-            content = content.substring(0, content.length() - 1);
+        return -1;
+    }
+    
+    /**
+     * 解析单个 multipart 部分（字节数组版本）
+     */
+    private void parseMultipartPartBytes(byte[] data, int start, int end, 
+                                          Map<String, List<UploadedFile>> result) {
+        // 找到头部和内容的分隔（\r\n\r\n 或 \n\n）
+        int headerEnd = -1;
+        int contentStart = -1;
+        
+        for (int i = start; i < end - 3; i++) {
+            if (data[i] == '\r' && data[i+1] == '\n' && data[i+2] == '\r' && data[i+3] == '\n') {
+                headerEnd = i;
+                contentStart = i + 4;
+                break;
+            }
+            if (data[i] == '\n' && data[i+1] == '\n') {
+                headerEnd = i;
+                contentStart = i + 2;
+                break;
+            }
         }
         
-        // 解析头部
+        if (headerEnd < 0 || contentStart < 0) return;
+        
+        // 解析头部（头部是文本，可以转字符串）
+        String headerSection = new String(data, start, headerEnd - start, Context.charset);
+        
         String name = null, filename = null;
         String fileContentType = "application/octet-stream";
         
@@ -406,7 +451,15 @@ public class FilePlugin extends Plugin {
         // 只处理文件字段
         if (name == null || filename == null || filename.isEmpty()) return;
         
-        byte[] fileContent = content.getBytes(Context.charset);
+        // 计算内容结束位置（去除尾部的 \r\n）
+        int contentEnd = end;
+        if (contentEnd > contentStart && data[contentEnd - 1] == '\n') contentEnd--;
+        if (contentEnd > contentStart && data[contentEnd - 1] == '\r') contentEnd--;
+        
+        // 直接复制字节数组，不经过字符串转换
+        int contentLength = contentEnd - contentStart;
+        byte[] fileContent = new byte[contentLength];
+        System.arraycopy(data, contentStart, fileContent, 0, contentLength);
         
         // 检查文件大小
         if (fileContent.length > maxFileSize) {

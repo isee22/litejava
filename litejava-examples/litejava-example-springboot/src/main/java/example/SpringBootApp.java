@@ -9,7 +9,8 @@ import litejava.plugins.cache.SpringCachePlugin;
 import litejava.plugins.database.MyBatisPlugin;
 import litejava.plugins.dataSource.HikariPlugin;
 import litejava.plugins.di.GuicePlugin;
-import litejava.plugins.http.RecoveryPlugin;
+import litejava.plugins.http.ExceptionPlugin;
+import litejava.plugins.http.ExceptionPlugin;
 import litejava.plugins.schedule.SchedulePlugin;
 import litejava.plugins.view.ThymeleafPlugin;
 
@@ -24,7 +25,7 @@ public class SpringBootApp {
         App app = LiteJava.create();
         
         // 中间件
-        app.use(RecoveryPlugin.withStack());
+        app.use(new ExceptionPlugin());
         app.use(new ThymeleafPlugin("templates/"));
         
         // 数据库

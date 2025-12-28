@@ -624,6 +624,57 @@ public class Context {
         return fail(code, msg);
     }
     
+    // ==================== 错误响应 ====================
+    
+    /**
+     * 抛出错误并中断请求（由 ExceptionPlugin 统一处理）
+     * 
+     * <p>用于在任意位置中断请求处理，返回错误响应。
+     * 
+     * <h3>示例</h3>
+     * <pre>{@code
+     * // 参数校验失败 - 400
+     * if (id <= 0) {
+     *     ctx.error(400, "无效的 ID");
+     * }
+     * 
+     * // 未登录 - 401
+     * if (user == null) {
+     *     ctx.error(401, "请先登录");
+     * }
+     * 
+     * // 无权限 - 403
+     * if (!hasPermission) {
+     *     ctx.error(403, "无权访问");
+     * }
+     * 
+     * // 资源不存在 - 404
+     * User user = userService.findById(id);
+     * if (user == null) {
+     *     ctx.error(404, "用户不存在");
+     * }
+     * }</pre>
+     * 
+     * @param httpStatus HTTP 状态码 (400/401/403/404/500 等)
+     * @param msg 错误消息
+     * @throws litejava.exception.LiteJavaException 总是抛出异常
+     */
+    public void error(int httpStatus, String msg) {
+        throw new litejava.exception.LiteJavaException(msg, httpStatus);
+    }
+    
+    /**
+     * 抛出错误（带详细信息）
+     * 
+     * @param httpStatus HTTP 状态码
+     * @param msg 错误消息
+     * @param details 额外信息
+     * @throws litejava.exception.LiteJavaException 总是抛出异常
+     */
+    public void error(int httpStatus, String msg, Map<String, Object> details) {
+        throw new litejava.exception.LiteJavaException(msg, httpStatus, details);
+    }
+    
     // ==================== 参数获取 ====================
     
     /**

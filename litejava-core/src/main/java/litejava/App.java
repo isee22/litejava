@@ -104,7 +104,7 @@ import java.util.function.*;
  * <h2>中间件（洋葱模型）</h2>
  * <pre>{@code
  * // 全局中间件
- * app.use(new RecoveryPlugin());    // 异常恢复
+ * app.use(new ExceptionPlugin());    // 异常恢复
  * app.use(new RequestLogPlugin());  // 请求日志
  * app.use(new CorsPlugin());        // 跨域处理
  * 
@@ -442,22 +442,6 @@ public class App {
     }
     
     /**
-     * 设置 404 处理器
-     */
-    public App noRoute(Handler handler) {
-        router.noRoute(handler);
-        return this;
-    }
-    
-    /**
-     * 设置 405 处理器
-     */
-    public App noMethod(Handler handler) {
-        router.noMethod(handler);
-        return this;
-    }
-    
-    /**
      * 注册异步 GET 路由（返回 CompletableFuture）
      */
     public Route getAsync(String path, AsyncHandler handler) {
@@ -664,22 +648,14 @@ public class App {
     
     // ==================== 请求处理 ====================
     
-    // 预创建的 404/405 handler，避免每次请求创建 lambda
-    private final Handler default404Handler = c -> c.status(404).json(Maps.of("error", "Not Found", "path", c.path));
-    private final Handler default405Handler = c -> {
-        c.status(405);
-        c.header("Allow", String.join(", ", router.getAllowedMethods(c.path)));
-        c.json(Maps.of("error", "Method Not Allowed", "method", c.method, "path", c.path));
-    };
-    
     /**
      * 处理 HTTP 请求（由服务器插件调用）
      * 
      * <p>处理流程：
      * <ol>
+     *   <li>执行中间件链（洋葱模型）</li>
      *   <li>路由匹配</li>
      *   <li>提取路径参数</li>
-     *   <li>执行中间件链（洋葱模型）</li>
      *   <li>执行 handler</li>
      * </ol>
      * 
@@ -687,30 +663,34 @@ public class App {
      * @throws Exception 处理异常
      */
     public void handle(Context ctx) throws Exception {
-        RouterPlugin.RouteMatch match = router.match(ctx.method, ctx.path);
-        
-        Handler finalHandler;
-        if (match != null) {
-            // 直接赋值，避免 putAll
-            if (match.params != null && !match.params.isEmpty()) {
-                ctx.params = match.params;
+        // 路由匹配和执行作为最终 handler
+        Handler routeHandler = c -> {
+            RouterPlugin.RouteMatch match = router.match(c.method, c.path);
+            
+            if (match != null) {
+                // 直接赋值，避免 putAll
+                if (match.params != null && !match.params.isEmpty()) {
+                    c.params = match.params;
+                }
+                if (match.wildcardName != null) {
+                    c.wildcardPath = match.wildcardValue;
+                    c.params.put(match.wildcardName, match.wildcardValue);
+                }
+                match.handler.handle(c);
+            } else if (router.hasPath(c.path)) {
+                // 405 Method Not Allowed
+                throw new LiteJavaException("Method Not Allowed: " + c.method + " " + c.path, 405);
+            } else {
+                // 404 Not Found
+                throw new LiteJavaException("Not Found: " + c.path, 404);
             }
-            if (match.wildcardName != null) {
-                ctx.wildcardPath = match.wildcardValue;
-                ctx.params.put(match.wildcardName, match.wildcardValue);
-            }
-            finalHandler = match.handler;
-        } else if (router.hasPath(ctx.path)) {
-            finalHandler = router.noMethodHandler != null ? router.noMethodHandler : default405Handler;
-        } else {
-            finalHandler = router.noRouteHandler != null ? router.noRouteHandler : default404Handler;
-        }
+        };
         
-        // 无中间件时直接执行 handler，避免创建 MiddlewareChain
+        // 无中间件时直接执行路由，避免创建 MiddlewareChain
         if (middlewares.isEmpty()) {
-            finalHandler.handle(ctx);
+            routeHandler.handle(ctx);
         } else {
-            new MiddlewareChain(middlewares, finalHandler).execute(ctx);
+            new MiddlewareChain(middlewares, routeHandler).execute(ctx);
         }
     }
     

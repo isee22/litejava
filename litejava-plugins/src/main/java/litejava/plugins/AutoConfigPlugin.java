@@ -15,7 +15,7 @@ import java.util.Map;
  *   litejava_plugins_DebugPlugin: true
  *   litejava_plugins_health_HealthPlugin: true
  *   litejava_plugins_security_CorsPlugin: true
- *   litejava_plugins_http_RecoveryPlugin: true
+ *   litejava_plugins_http_ExceptionPlugin: true
  *   
  *   # 禁用插件
  *   litejava_plugins_log_RequestLogPlugin: false

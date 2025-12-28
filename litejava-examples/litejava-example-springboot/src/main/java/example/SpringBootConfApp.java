@@ -7,7 +7,8 @@ import litejava.plugins.cache.MemoryCachePlugin;
 import litejava.plugins.database.MyBatisPlugin;
 import litejava.plugins.dataSource.HikariPlugin;
 import litejava.plugins.di.GuicePlugin;
-import litejava.plugins.http.RecoveryPlugin;
+import litejava.plugins.http.ExceptionPlugin;
+import litejava.plugins.http.ExceptionPlugin;
 import litejava.plugins.schedule.SchedulePlugin;
 import litejava.plugins.view.ThymeleafPlugin;
 
@@ -23,7 +24,7 @@ public class SpringBootConfApp {
         App app = LiteJava.create("application-conf.yml");
         
         // 中间件
-        app.use(RecoveryPlugin.withStack());
+        app.use(new ExceptionPlugin());
         app.use(new ThymeleafPlugin());
         
         // 数据源 + MyBatis
