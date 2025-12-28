@@ -1,5 +1,7 @@
 package litejava.plugins.cache;
 
+import litejava.plugin.CachePlugin;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -8,15 +10,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * 
  * <h2>使用示例</h2>
  * <pre>{@code
- * // 开发/测试环境使用
+ * // 开发环境 - 内存缓存
  * app.use(new MemoryCachePlugin());
  * 
- * // 通过基类 instance 访问 (推荐，便于切换实现)
- * CachePlugin.instance.set("book:1", book);
- * Book book = CachePlugin.instance.get("book:1");
+ * // 生产环境 - Redis
+ * app.use(new RedisCachePlugin());
+ * 
+ * // 通过 app.cache 访问
+ * app.cache.set("book:1", book);
+ * Book book = app.cache.get("book:1");
+ * app.cache.del("book:*");  // 通配符删除
  * 
  * // 需要 Memory 特有功能时，强制转换
- * MemoryCachePlugin mem = (MemoryCachePlugin) CachePlugin.instance;
+ * MemoryCachePlugin mem = (MemoryCachePlugin) app.cache;
  * mem.clear();
  * int size = mem.size();
  * }</pre>

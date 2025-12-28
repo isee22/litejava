@@ -3,17 +3,13 @@ package litejava.plugins.annotation;
 import litejava.Context;
 import litejava.Handler;
 import litejava.Plugin;
+import litejava.plugin.ClassScanner;
 
 import javax.ws.rs.*;
-import java.io.File;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 /**
  * JAX-RS 注解路由插件 - 轻量级，只解析注解并注册到 LiteJava 路由
@@ -72,10 +68,19 @@ public class JaxRsAnnotationPlugin extends Plugin {
         packages = app.conf.getString("jaxrs", "packages", packages);
         autoScan = app.conf.getBool("jaxrs", "autoScan", autoScan);
 
+        ClassScanner scanner = ClassScanner.getInstance();
+
         // 1. 扫描配置的包
         if (packages != null && !packages.isEmpty()) {
             for (String pkg : packages.split(",")) {
-                scanPackage(pkg.trim());
+                String trimmed = pkg.trim();
+                if (!trimmed.isEmpty()) {
+                    for (Class<?> clazz : scanner.scan(trimmed)) {
+                        if (clazz.isAnnotationPresent(Path.class)) {
+                            resources.add(clazz);
+                        }
+                    }
+                }
             }
         }
 
@@ -83,13 +88,24 @@ public class JaxRsAnnotationPlugin extends Plugin {
         if (resources.isEmpty() && mainClass != null) {
             String basePackage = mainClass.getPackage().getName();
             app.log.info("JaxRsAnnotationPlugin: Scanning package '" + basePackage + "'");
-            scanPackage(basePackage);
+            for (Class<?> clazz : scanner.scan(basePackage)) {
+                if (clazz.isAnnotationPresent(Path.class)) {
+                    resources.add(clazz);
+                }
+            }
         }
 
-        // 3. 自动扫描整个 classpath
+        // 3. 自动扫描（需要指定包名）
         if (resources.isEmpty() && autoScan) {
             app.log.info("JaxRsAnnotationPlugin: Auto-scanning classpath for @Path classes...");
-            scanClasspath();
+            // 扫描常见的包名
+            for (String pkg : new String[]{"example", "com", "org", "app", "api"}) {
+                for (Class<?> clazz : scanner.scan(pkg)) {
+                    if (clazz.isAnnotationPresent(Path.class)) {
+                        resources.add(clazz);
+                    }
+                }
+            }
         }
 
         // 注册所有资源
@@ -103,130 +119,6 @@ public class JaxRsAnnotationPlugin extends Plugin {
     public JaxRsAnnotationPlugin register(Class<?> resourceClass) {
         resources.add(resourceClass);
         return this;
-    }
-
-    public JaxRsAnnotationPlugin scanPackage(String packageName) {
-        try {
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            String path = packageName.replace('.', '/');
-            Enumeration<URL> urls = cl.getResources(path);
-
-            while (urls.hasMoreElements()) {
-                URL url = urls.nextElement();
-                String protocol = url.getProtocol();
-                if ("file".equals(protocol)) {
-                    scanDirectory(new File(url.toURI()), packageName);
-                } else if ("jar".equals(protocol)) {
-                    scanJar(url, packageName);
-                }
-            }
-        } catch (Exception e) {
-            app.log.warn("Failed to scan package: " + packageName + " - " + e.getMessage());
-        }
-        return this;
-    }
-
-    private void scanClasspath() {
-        try {
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            Enumeration<URL> urls = cl.getResources("");
-
-            while (urls.hasMoreElements()) {
-                URL url = urls.nextElement();
-                String protocol = url.getProtocol();
-                if ("file".equals(protocol)) {
-                    scanDirectory(new File(url.toURI()), "");
-                }
-            }
-
-            // 扫描 JAR 文件
-            String classpath = System.getProperty("java.class.path");
-            if (classpath != null) {
-                for (String path : classpath.split(File.pathSeparator)) {
-                    if (path.endsWith(".jar")) {
-                        scanJarFile(new File(path));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            app.log.warn("Failed to scan classpath: " + e.getMessage());
-        }
-    }
-
-    private void scanDirectory(File dir, String packageName) {
-        if (!dir.exists() || !dir.isDirectory()) return;
-
-        File[] files = dir.listFiles();
-        if (files == null) return;
-
-        for (File file : files) {
-            String name = file.getName();
-            if (file.isDirectory()) {
-                String subPackage = packageName.isEmpty() ? name : packageName + "." + name;
-                scanDirectory(file, subPackage);
-            } else if (name.endsWith(".class") && !name.contains("$")) {
-                String className = packageName.isEmpty() ? 
-                    name.replace(".class", "") : 
-                    packageName + "." + name.replace(".class", "");
-                tryRegisterClass(className);
-            }
-        }
-    }
-
-    private void scanJar(URL url, String packageName) {
-        try {
-            String jarPath = url.getPath();
-            if (jarPath.contains("!")) {
-                jarPath = jarPath.substring(5, jarPath.indexOf("!"));
-            }
-            scanJarFile(new File(jarPath), packageName);
-        } catch (Exception e) {
-            // ignore
-        }
-    }
-
-    private void scanJarFile(File jarFile) {
-        scanJarFile(jarFile, null);
-    }
-
-    private void scanJarFile(File jarFile, String packageFilter) {
-        if (!jarFile.exists()) return;
-
-        try (JarFile jar = new JarFile(jarFile)) {
-            Enumeration<JarEntry> entries = jar.entries();
-            String pathFilter = packageFilter != null ? packageFilter.replace('.', '/') : null;
-
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                String name = entry.getName();
-
-                if (!name.endsWith(".class") || name.contains("$")) continue;
-                if (pathFilter != null && !name.startsWith(pathFilter)) continue;
-                // 跳过框架和常见库
-                if (name.startsWith("java/") || name.startsWith("javax/") || 
-                    name.startsWith("sun/") || name.startsWith("com/sun/") ||
-                    name.startsWith("org/springframework/") || name.startsWith("org/apache/") ||
-                    name.startsWith("com/fasterxml/") || name.startsWith("io/netty/") ||
-                    name.startsWith("litejava/")) continue;
-
-                String className = name.replace('/', '.').replace(".class", "");
-                tryRegisterClass(className);
-            }
-        } catch (Exception e) {
-            // ignore invalid jars
-        }
-    }
-
-    private void tryRegisterClass(String className) {
-        try {
-            Class<?> clazz = Class.forName(className, false, 
-                Thread.currentThread().getContextClassLoader());
-            if (clazz.isAnnotationPresent(Path.class)) {
-                resources.add(clazz);
-            }
-        } catch (Throwable e) {
-            // ignore classes that can't be loaded
-        }
     }
 
     private void registerResource(Class<?> clazz) {

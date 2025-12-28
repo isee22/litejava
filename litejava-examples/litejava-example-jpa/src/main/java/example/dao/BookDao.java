@@ -10,32 +10,38 @@ import java.util.List;
  */
 public class BookDao {
     
+    private final JpaPlugin jpa;
+    
+    public BookDao(JpaPlugin jpa) {
+        this.jpa = jpa;
+    }
+    
     public Book findById(long id) {
-        return JpaPlugin.instance.query(em -> em.find(Book.class, id));
+        return jpa.query(em -> em.find(Book.class, id));
     }
     
     public List<Book> findAll() {
-        return JpaPlugin.instance.query(em -> 
+        return jpa.query(em -> 
             em.createQuery("SELECT b FROM Book b", Book.class).getResultList());
     }
     
     public List<Book> search(String keyword) {
-        return JpaPlugin.instance.query(em -> 
+        return jpa.query(em -> 
             em.createQuery("SELECT b FROM Book b WHERE b.title LIKE :kw OR b.author LIKE :kw", Book.class)
                 .setParameter("kw", "%" + keyword + "%")
                 .getResultList());
     }
     
     public void create(Book book) {
-        JpaPlugin.instance.txVoid(em -> em.persist(book));
+        jpa.txVoid(em -> em.persist(book));
     }
     
     public void update(Book book) {
-        JpaPlugin.instance.txVoid(em -> em.merge(book));
+        jpa.txVoid(em -> em.merge(book));
     }
     
     public void delete(long id) {
-        JpaPlugin.instance.txVoid(em -> {
+        jpa.txVoid(em -> {
             Book book = em.find(Book.class, id);
             if (book != null) em.remove(book);
         });

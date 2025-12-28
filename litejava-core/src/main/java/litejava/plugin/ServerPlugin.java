@@ -40,7 +40,7 @@ import litejava.Plugin;
  *     
  *     @Override
  *     public void start() {
- *         server = new MyServer(host, app.port);
+ *         server = new MyServer(host, port);  // 使用继承的 port 字段
  *         server.setHandler(exchange -> {
  *             Context ctx = new Context();
  *             ctx.app = app;
@@ -68,6 +68,9 @@ public class ServerPlugin extends Plugin {
     
     // ==================== 通用服务器配置 ====================
     
+    /** 服务器端口 */
+    public int port = 8080;
+    
     /** 绑定地址，默认 0.0.0.0（所有网卡） */
     public String host = "0.0.0.0";
     
@@ -86,8 +89,27 @@ public class ServerPlugin extends Plugin {
     /** 最大请求体大小（字节），默认 10MB */
     public int maxRequestSize = 10 * 1024 * 1024;
     
+    public ServerPlugin() {
+    }
+    
+    /**
+     * 构造函数 - 指定端口
+     */
+    public ServerPlugin(int port) {
+        this.port = port;
+    }
+    
+    /**
+     * 构造函数 - 指定端口和主机
+     */
+    public ServerPlugin(int port, String host) {
+        this.port = port;
+        this.host = host;
+    }
+    
     @Override
     public void config() {
+        port = app.conf.getInt("server", "port", port);
         host = app.conf.getString("server", "host", host);
         minThreads = app.conf.getInt("server.threads", "min", minThreads);
         maxThreads = app.conf.getInt("server.threads", "max", maxThreads);

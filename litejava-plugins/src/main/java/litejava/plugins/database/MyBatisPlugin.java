@@ -1,8 +1,9 @@
 package litejava.plugins.database;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import litejava.Plugin;
+import java.util.function.Function;
+
+import javax.sql.DataSource;
+
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
@@ -10,87 +11,97 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 
-import java.util.function.Function;
+import litejava.Plugin;
+import litejava.plugins.dataSource.DataSourcePlugin;
 
 /**
  * MyBatis 插件 - 配置、初始化和便捷操作
  * 
- * <h2>配置</h2>
- * <pre>{@code
- * mybatis.url=jdbc:mysql://localhost:3306/mydb
- * mybatis.username=root
- * mybatis.password=123456
- * mybatis.mapperPackage=com.example.mapper
- * mybatis.pool.maxSize=10
- * }</pre>
+ * <h2>配置 (application.yml)</h2>
+ * <pre>
+ * datasource:
+ *   url: jdbc:mysql://localhost:3306/mydb
+ *   username: root
+ *   password: root
+ * mybatis:
+ *   mapperPackage: com.example.mapper
+ * </pre>
  * 
  * <h2>使用示例</h2>
  * <pre>{@code
- * // 注册插件
- * MyBatisPlugin mybatis = new MyBatisPlugin();
- * app.use(mybatis);
+ * // 单数据源
+ * HikariPlugin hikari = new HikariPlugin();
+ * app.use(hikari);
+ * app.use(new MyBatisPlugin(hikari));
  * 
- * // 方式1: 使用实例方法 execute (推荐)
- * User user = MyBatisPlugin.instance.execute(UserMapper.class, m -> m.findById(1));
- * List<User> users = MyBatisPlugin.instance.execute(UserMapper.class, UserMapper::findAll);
+ * // 指定 Mapper 类
+ * app.use(new MyBatisPlugin(hikari, UserMapper.class, OrderMapper.class));
  * 
- * // 方式2: 使用事务 tx
- * MyBatisPlugin.instance.tx(session -> {
+ * // 多数据源
+ * HikariPlugin primary = new HikariPlugin("datasource.primary");
+ * HikariPlugin secondary = new HikariPlugin("datasource.secondary");
+ * app.use(primary);
+ * app.use(secondary);
+ * app.use("primaryMybatis", new MyBatisPlugin(primary));
+ * app.use("secondaryMybatis", new MyBatisPlugin(secondary));
+ * 
+ * // 执行查询
+ * MyBatisPlugin mybatis = app.getPlugin(MyBatisPlugin.class);
+ * User user = mybatis.execute(UserMapper.class, m -> m.findById(1));
+ * 
+ * // 事务
+ * mybatis.tx(session -> {
  *     UserMapper mapper = session.getMapper(UserMapper.class);
  *     mapper.insert(user1);
  *     mapper.insert(user2);
  *     return null;
  * });
- * 
- * // 方式3: 直接使用 SqlSessionFactory
- * try (SqlSession session = mybatis.sqlSessionFactory.openSession()) {
- *     UserMapper mapper = session.getMapper(UserMapper.class);
- *     User user = mapper.findById(1);
- * }
  * }</pre>
+ * 
+ * @see DataSourcePlugin 数据源插件基类
+ * @see litejava.plugins.dataSource.HikariPlugin HikariCP 数据源
  */
 public class MyBatisPlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static MyBatisPlugin instance;
+    /** 数据源插件 */
+    private final DataSourcePlugin dataSourcePlugin;
     
-    /** HikariCP 数据源，初始化后可用 */
-    public HikariDataSource dataSource;
-    
-    /** MyBatis SqlSessionFactory，初始化后可用 */
+    /** MyBatis SqlSessionFactory */
     public SqlSessionFactory sqlSessionFactory;
     
-    /** Mapper 类（可选，用于构造时注册） */
+    /** Mapper 类（可选） */
     private Class<?>[] mapperClasses;
     
-    public MyBatisPlugin() {
-        instance = this;
+    /**
+     * 构造 MyBatisPlugin
+     * 
+     * @param dataSourcePlugin 数据源插件（必须）
+     */
+    public MyBatisPlugin(DataSourcePlugin dataSourcePlugin) {
+        this.dataSourcePlugin = dataSourcePlugin;
     }
     
     /**
-     * 构造时指定 Mapper 类
+     * 构造 MyBatisPlugin 并指定 Mapper 类
+     * 
+     * @param dataSourcePlugin 数据源插件（必须）
+     * @param mapperClasses Mapper 接口类
      */
-    public MyBatisPlugin(Class<?>... mapperClasses) {
-        instance = this;
+    public MyBatisPlugin(DataSourcePlugin dataSourcePlugin, Class<?>... mapperClasses) {
+        this.dataSourcePlugin = dataSourcePlugin;
         this.mapperClasses = mapperClasses;
     }
     
     @Override
     public void config() {
-        HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(app.conf.getString("mybatis", "url", null));
-        hikariConfig.setUsername(app.conf.getString("mybatis", "username", null));
-        hikariConfig.setPassword(app.conf.getString("mybatis", "password", null));
-        hikariConfig.setMaximumPoolSize(app.conf.getInt("mybatis", "poolMaxSize", 10));
-        
-        dataSource = new HikariDataSource(hikariConfig);
+        DataSource dataSource = dataSourcePlugin.dataSource;
         
         Configuration configuration = new Configuration();
         configuration.setEnvironment(new Environment("default", 
             new JdbcTransactionFactory(), dataSource));
         configuration.setMapUnderscoreToCamelCase(true);
         
-        // 从配置文件注册 mapper 包（支持逗号分隔多个包）
+        // 从配置文件注册 mapper 包
         String mapperPackage = app.conf.getString("mybatis", "mapperPackage", null);
         if (mapperPackage != null) {
             for (String pkg : mapperPackage.split(",")) {
@@ -109,14 +120,19 @@ public class MyBatisPlugin extends Plugin {
         }
         
         sqlSessionFactory = new SqlSessionFactoryBuilder().build(configuration);
-        app.log.info("MyBatisPlugin configured");
+        app.log.info("MyBatisPlugin: Ready");
+    }
+    
+    /**
+     * 获取数据源
+     */
+    public DataSource getDataSource() {
+        return dataSourcePlugin.dataSource;
     }
     
     @Override
     public void uninstall() {
-        if (dataSource != null) {
-            dataSource.close();
-        }
+        // 不关闭 DataSourcePlugin，由 App 统一管理
     }
     
     /**
@@ -128,10 +144,6 @@ public class MyBatisPlugin extends Plugin {
     
     /**
      * 执行 Mapper 操作（自动管理 Session）
-     * 
-     * @param mapperClass Mapper 接口类
-     * @param action 操作函数
-     * @return 操作结果
      */
     public <T, R> R execute(Class<T> mapperClass, Function<T, R> action) {
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
@@ -142,9 +154,6 @@ public class MyBatisPlugin extends Plugin {
     
     /**
      * 执行事务操作（手动提交）
-     * 
-     * @param action 事务操作函数
-     * @return 操作结果
      */
     public <R> R tx(Function<SqlSession, R> action) {
         try (SqlSession session = sqlSessionFactory.openSession(false)) {
@@ -157,5 +166,19 @@ public class MyBatisPlugin extends Plugin {
                 throw e;
             }
         }
+    }
+    
+    /**
+     * 获取 Mapper 实例（用于 DI 绑定）
+     */
+    public <T> T getMapper(Class<T> mapperClass) {
+        return sqlSessionFactory.openSession(true).getMapper(mapperClass);
+    }
+    
+    /**
+     * 获取所有已注册的 Mapper 类
+     */
+    public java.util.Collection<Class<?>> getMapperClasses() {
+        return sqlSessionFactory.getConfiguration().getMapperRegistry().getMappers();
     }
 }

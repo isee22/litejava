@@ -79,11 +79,18 @@
 | Slf4jLogPlugin | ✅ | SLF4J | SLF4J 日志适配 |
 | RequestLogPlugin | ✅ | - | 请求日志中间件 |
 
+### 数据源 (dataSource/)
+
+| 插件 | 状态 | 依赖 | 说明 |
+|------|------|------|------|
+| HikariPlugin | ✅ | HikariCP | HikariCP 连接池（推荐） |
+| DruidPlugin | ✅ | Druid | Druid 连接池 |
+
 ### 数据库 (database/)
 
 | 插件 | 状态 | 依赖 | 说明 |
 |------|------|------|------|
-| JdbcPlugin | ✅ | HikariCP + Spring JDBC | 连接池 + JdbcTemplate |
+| JdbcPlugin | ✅ | Spring JDBC | JdbcTemplate 封装 |
 | MyBatisPlugin | ✅ | MyBatis | SQL 映射框架 |
 | JpaPlugin | ✅ | Hibernate | JPA ORM |
 | HibernatePlugin | ✅ | Hibernate | Hibernate ORM |
@@ -135,13 +142,13 @@
 | RegexRouterPlugin | ✅ | - | 正则路由 |
 | TrieRouterPlugin | ✅ | - | Trie 树路由 |
 
-### 注解路由 (route/)
+### 注解路由 (annotation/)
 
 | 插件 | 状态 | 依赖 | 说明 |
 |------|------|------|------|
-| JaxRsPlugin | ✅ | JAX-RS | JAX-RS 注解路由 |
-| JerseyPlugin | ✅ | Jersey | Jersey 集成 |
-| SpringMvcPlugin | ✅ | Spring Web | Spring MVC 注解路由 |
+| JaxRsAnnotationPlugin | ✅ | JAX-RS | JAX-RS 注解路由 |
+| JerseyRuntimePlugin | ✅ | Jersey | Jersey 运行时 |
+| SpringMvcAnnotationPlugin | ✅ | Spring Web | Spring MVC 注解路由 |
 
 ### 模板引擎 (view/)
 

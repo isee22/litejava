@@ -3,6 +3,7 @@ package example;
 import litejava.App;
 import litejava.plugin.HttpServerPlugin;
 import litejava.plugins.annotation.SpringMvcAnnotationPlugin;
+import litejava.plugins.json.JacksonPlugin;
 
 import java.util.Map;
 
@@ -30,15 +31,18 @@ public class SpringMvcApp {
     public static void main(String[] args) {
         App app = new App();
         app.use(new HttpServerPlugin());
+        app.use(new JacksonPlugin());
         
-        // 零配置！自动扫描 @RestController/@Controller
-        app.use(new SpringMvcAnnotationPlugin());
+        // 扫描 example 包下的 @RestController/@Controller
+        SpringMvcAnnotationPlugin springMvc = new SpringMvcAnnotationPlugin();
+        springMvc.packages = "example";
+        app.use(springMvc);
         
         app.get("/", ctx -> ctx.json(Map.of(
             "message", "LiteJava Spring MVC Annotation Example",
             "endpoints", "/api/users"
         )));
         
-        app.run(8080);
+        app.run();
     }
 }

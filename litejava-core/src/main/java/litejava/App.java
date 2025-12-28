@@ -2,6 +2,8 @@ package litejava;
 
 import litejava.exception.*;
 import litejava.plugin.*;
+import litejava.plugin.CachePlugin;
+import litejava.util.Maps;
 
 import java.io.*;
 import java.util.*;
@@ -112,6 +114,40 @@ import java.util.function.*;
  *     .whitelistPrefix("/static"));
  * }</pre>
  * 
+ * <h2>继承扩展 App</h2>
+ * <p>如果默认行为不满足需求，可以继承 App 重写任意方法：
+ * <pre>{@code
+ * public class MyApp extends App {
+ *     
+ *     // 自定义错误处理
+ *     @Override
+ *     public void handleError(Context ctx, Exception e) {
+ *         log.error("Request failed: " + ctx.path, e);
+ *         ctx.status(500).json(Map.of(
+ *             "code", -1,
+ *             "msg", e.getMessage()
+ *         ));
+ *     }
+ *     
+ *     // 自定义请求处理流程
+ *     @Override
+ *     public void handle(Context ctx) throws Exception {
+ *         long start = System.currentTimeMillis();
+ *         try {
+ *             super.handle(ctx);
+ *         } finally {
+ *             log.info(ctx.method + " " + ctx.path + " " + (System.currentTimeMillis() - start) + "ms");
+ *         }
+ *     }
+ * }
+ * 
+ * // 使用自定义 App
+ * MyApp app = new MyApp();
+ * app.use(new HttpServerPlugin());
+ * app.get("/", ctx -> ctx.text("Hello"));
+ * app.run();
+ * }</pre>
+ * 
  * @author LiteJava Team
  * @since 1.0.0
  * @see Context 请求上下文
@@ -121,15 +157,7 @@ import java.util.function.*;
  */
 public class App {
     
-    // ==================== 静态实例 ====================
-    
-    /** 默认实例（单例访问） */
-    public static App instance;
-    
     // ==================== 应用配置 ====================
-    
-    /** 服务器端口，默认 8080，可通过配置文件 server.port 覆盖 */
-    public int port = 8080;
     
     /** 开发模式，true 时显示详细错误信息和堆栈 */
     public boolean devMode = true;
@@ -145,13 +173,13 @@ public class App {
     /** 中间件列表，按注册顺序执行（洋葱模型） */
     public List<MiddlewarePlugin> middlewares = new ArrayList<>();
     
-    /** 已注册的插件 Map，key 为插件类名 */
-    public final Map<String, Object> plugins = new LinkedHashMap<>();
+    /** 已注册的插件 Map，key 为插件名称（默认类名） */
+    public final Map<String, Plugin> plugins = new LinkedHashMap<>();
     
     /** 自定义错误处理器 */
     public BiConsumer<Context, Throwable> errorHandler;
     
-    // ==================== 内置插件引用 ====================
+    // ==================== 内置插件引用（快捷访问） ====================
     
     /** 服务器插件（必须注册一个） */
     public ServerPlugin server;
@@ -171,6 +199,9 @@ public class App {
     /** 文件处理插件 */
     public FilePlugin file = new FilePlugin();
     
+    /** 缓存插件 */
+    public CachePlugin cache;
+    
     // ==================== 内部状态 ====================
     
     /** 优雅停机标志 */
@@ -188,20 +219,9 @@ public class App {
     // ==================== 构造函数 ====================
     
     public App() {
-        instance = this;
     }
     
     // ==================== 链式配置 API ====================
-    
-    /**
-     * 设置服务器端口
-     * @param port 端口号
-     * @return this（支持链式调用）
-     */
-    public App port(int port) {
-        this.port = port;
-        return this;
-    }
     
     /**
      * 设置开发模式
@@ -243,24 +263,57 @@ public class App {
      * @return this
      */
     public App use(Plugin plugin) {
+        return use(plugin.getClass().getSimpleName(), plugin);
+    }
+    
+    /**
+     * 注册命名插件（多实例场景）
+     * 
+     * <pre>{@code
+     * // 多数据源
+     * app.use("primary", new HikariPlugin("datasource.primary"));
+     * app.use("secondary", new HikariPlugin("datasource.secondary"));
+     * 
+     * // 获取
+     * HikariPlugin primary = app.getPlugin("primary", HikariPlugin.class);
+     * HikariPlugin secondary = app.getPlugin("secondary", HikariPlugin.class);
+     * }</pre>
+     * 
+     * @param name 插件名称
+     * @param plugin 插件实例
+     * @return this
+     */
+    public App use(String name, Plugin plugin) {
         plugin.app = this;
-        plugin.config();
-        plugins.put(plugin.getClass().getSimpleName(), plugin);
         
-        // 自动注册到对应字段
-        if (plugin instanceof ConfPlugin) {
+        // 检查是否已有同类型插件（非命名注册时警告）
+        if (name.equals(plugin.getClass().getSimpleName())) {
+            Plugin existing = getPlugin(plugin.getClass());
+            if (existing != null && existing != plugin) {
+                log.warn(plugin.getClass().getSimpleName() + ": Multiple instances detected. " +
+                        "Use app.use(name, plugin) for multi-instance scenarios.");
+            }
+        }
+        
+        plugin.config();
+        plugins.put(name, plugin);
+        
+        // 自动注册到对应字段（仅第一个）
+        if (plugin instanceof ConfPlugin && this.conf.getClass() == ConfPlugin.class) {
             this.conf = (ConfPlugin) plugin;
-        } else if (plugin instanceof LogPlugin) {
+        } else if (plugin instanceof LogPlugin && this.log.getClass() == LogPlugin.class) {
             this.log = (LogPlugin) plugin;
-        } else if (plugin instanceof JsonPlugin) {
+        } else if (plugin instanceof JsonPlugin && this.json == null) {
             this.json = (JsonPlugin) plugin;
-        } else if (plugin instanceof ViewPlugin) {
+        } else if (plugin instanceof ViewPlugin && this.view == null) {
             this.view = (ViewPlugin) plugin;
-        } else if (plugin instanceof FilePlugin) {
+        } else if (plugin instanceof FilePlugin && this.file.getClass() == FilePlugin.class) {
             this.file = (FilePlugin) plugin;
-        } else if (plugin instanceof ServerPlugin) {
+        } else if (plugin instanceof CachePlugin && this.cache == null) {
+            this.cache = (CachePlugin) plugin;
+        } else if (plugin instanceof ServerPlugin && this.server == null) {
             this.server = (ServerPlugin) plugin;
-        } else if (plugin instanceof RouterPlugin) {
+        } else if (plugin instanceof RouterPlugin && this.router.getClass() == RouterPlugin.class) {
             this.router = (RouterPlugin) plugin;
         } else if (plugin instanceof MiddlewarePlugin) {
             middlewares.add((MiddlewarePlugin) plugin);
@@ -461,7 +514,14 @@ public class App {
     // ==================== 生命周期 ====================
     
     /**
-     * 启动服务器（使用配置文件中的端口）
+     * 启动服务器
+     * 
+     * <p>端口由 ServerPlugin 管理，可通过以下方式设置：
+     * <ul>
+     *   <li>配置文件 server.port</li>
+     *   <li>构造函数 new HttpServerPlugin(9000)</li>
+     *   <li>字段设置 serverPlugin.port = 9000</li>
+     * </ul>
      * 
      * <p>启动流程：
      * <ol>
@@ -473,22 +533,12 @@ public class App {
      * </ol>
      */
     public void run() {
-        run(conf.getInt("server", "port", port));
-    }
-    
-    /**
-     * 启动服务器（指定端口）
-     * @param port 服务器端口
-     */
-    public void run(int port) {
-        // 从配置加载 devMode 和 charset
+        // 从配置加载
         devMode = conf.getBool("server", "devMode", devMode);
         String charset = conf.getString("server", "charset", null);
         if (charset != null) {
             Context.setCharset(charset);
         }
-        
-        this.port = port;
         
         for (Plugin plugin : pluginList) {
             try {
@@ -523,10 +573,8 @@ public class App {
             callback.run();
         }
         
-        String host = conf.getString("server", "host", "0.0.0.0");
-        String displayHost = "0.0.0.0".equals(host) ? "localhost" : host;
-        log.info("Server started on port " + port + " [" + env + " mode]");
-        log.info("  -> http://" + displayHost + ":" + port + "/");
+        log.info("Server started on port " + server.port + " [" + env + " mode]");
+        log.info("  -> http://" + ("0.0.0.0".equals(server.host) ? "localhost" : server.host) + ":" + server.port + "/");
         Runtime.getRuntime().addShutdownHook(new Thread(this::gracefulStop));
     }
     
@@ -573,11 +621,11 @@ public class App {
     // ==================== 请求处理 ====================
     
     // 预创建的 404/405 handler，避免每次请求创建 lambda
-    private final Handler default404Handler = c -> c.status(404).json(Map.of("error", "Not Found", "path", c.path));
+    private final Handler default404Handler = c -> c.status(404).json(Maps.of("error", "Not Found", "path", c.path));
     private final Handler default405Handler = c -> {
         c.status(405);
         c.header("Allow", String.join(", ", router.getAllowedMethods(c.path)));
-        c.json(Map.of("error", "Method Not Allowed", "method", c.method, "path", c.path));
+        c.json(Maps.of("error", "Method Not Allowed", "method", c.method, "path", c.path));
     };
     
     /**
@@ -656,23 +704,65 @@ public class App {
             errorResponse.put("stack", sw.toString());
             ctx.json(errorResponse);
         } else {
-            ctx.json(Map.of("error", "Internal Server Error"));
+            ctx.json(Maps.of("error", "Internal Server Error"));
         }
     }
     
     /**
      * 获取已注册的插件
      * 
+     * <p>支持按具体类或父类/接口查找：
      * <pre>{@code
+     * // 按具体类查找
      * JdbcPlugin jdbc = app.getPlugin(JdbcPlugin.class);
-     * jdbc.jdbcTemplate.query(...);
+     * 
+     * // 按父类查找（返回第一个匹配的子类实例）
+     * DataSourcePlugin ds = app.getPlugin(DataSourcePlugin.class);  // 可能返回 HikariPlugin 或 DruidPlugin
+     * CachePlugin cache = app.getPlugin(CachePlugin.class);         // 可能返回 MemoryCachePlugin 或 RedisCachePlugin
      * }</pre>
      * 
-     * @param clazz 插件类
+     * @param clazz 插件类（可以是具体类或父类/接口）
      * @return 插件实例，未注册返回 null
      */
     @SuppressWarnings("unchecked")
     public <T> T getPlugin(Class<T> clazz) {
-        return (T) plugins.get(clazz.getSimpleName());
+        // 先按类名精确查找
+        Plugin plugin = plugins.get(clazz.getSimpleName());
+        if (plugin != null && clazz.isInstance(plugin)) {
+            return (T) plugin;
+        }
+        
+        // 按父类/接口查找（返回第一个匹配的）
+        for (Plugin p : plugins.values()) {
+            if (clazz.isInstance(p)) {
+                return (T) p;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 按名称获取插件（多实例场景）
+     * 
+     * <pre>{@code
+     * // 多数据源
+     * app.use("primary", new HikariPlugin("datasource.primary"));
+     * app.use("secondary", new HikariPlugin("datasource.secondary"));
+     * 
+     * HikariPlugin primary = app.getPlugin("primary", HikariPlugin.class);
+     * HikariPlugin secondary = app.getPlugin("secondary", HikariPlugin.class);
+     * }</pre>
+     * 
+     * @param name 插件名称
+     * @param clazz 插件类
+     * @return 插件实例，未注册返回 null
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getPlugin(String name, Class<T> clazz) {
+        Plugin plugin = plugins.get(name);
+        if (plugin != null && clazz.isInstance(plugin)) {
+            return (T) plugin;
+        }
+        return null;
     }
 }

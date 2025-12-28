@@ -42,7 +42,7 @@ import javax.validation.ValidatorFactory;
  * app.post("/users", ctx -> {
  *     UserForm form = ctx.bodyAs(UserForm.class);
  *     
- *     Set<ConstraintViolation<UserForm>> violations = ValidationPlugin.instance.validator.validate(form);
+ *     Set<ConstraintViolation<UserForm>> violations = app.getPlugin(ValidationPlugin.class).validator.validate(form);
  *     if (!violations.isEmpty()) {
  *         List<String> errors = violations.stream()
  *             .map(v -> v.getPropertyPath() + ": " + v.getMessage())
@@ -68,9 +68,6 @@ import javax.validation.ValidatorFactory;
  */
 public class ValidationPlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static ValidationPlugin instance;
-    
     /** ValidatorFactory */
     public ValidatorFactory factory;
     
@@ -78,7 +75,6 @@ public class ValidationPlugin extends Plugin {
     public Validator validator;
     
     public ValidationPlugin() {
-        instance = this;
     }
     
     @Override

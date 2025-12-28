@@ -1,7 +1,7 @@
 package example.dao;
 
+import example.infra.Db;
 import example.model.User;
-import litejava.plugins.database.JdbcPlugin;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -13,7 +13,7 @@ import java.util.List;
 public class UserDao {
     
     private JdbcTemplate jdbc() {
-        return JdbcPlugin.instance.jdbcTemplate;
+        return Db.jdbc();
     }
     
     private static final RowMapper<User> ROW_MAPPER = (rs, rowNum) -> {

@@ -2,6 +2,7 @@ package litejava.plugins.security;
 
 import litejava.Context;
 import litejava.Plugin;
+import litejava.util.Maps;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -124,7 +125,7 @@ public class OAuth2Plugin extends Plugin {
     private void handleLogin(Context ctx, String providerName) {
         ProviderConfig config = providers.get(providerName);
         if (config == null) {
-            ctx.status(404).json(Map.of("error", "Provider not found"));
+            ctx.status(404).json(Maps.of("error", "Provider not found"));
             return;
         }
         
@@ -191,7 +192,7 @@ public class OAuth2Plugin extends Plugin {
             if (onSuccess != null) {
                 onSuccess.accept(ctx, user);
             } else {
-                ctx.json(Map.of("user", user));
+                ctx.json(Maps.of("user", user));
             }
             
         } catch (Exception e) {
@@ -203,7 +204,7 @@ public class OAuth2Plugin extends Plugin {
         if (onError != null) {
             onError.accept(ctx, message);
         } else {
-            ctx.status(400).json(Map.of("error", message));
+            ctx.status(400).json(Maps.of("error", message));
         }
     }
     

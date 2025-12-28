@@ -16,12 +16,28 @@
     <name>LiteJava Examples</name>
     <description>Example projects demonstrating LiteJava framework</description>
 
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
     <modules>
+        <module>litejava-example-guice</module>
         <module>litejava-example-jaxrsAnnotation</module>
         <module>litejava-example-jerseyAnnotation</module>
         <module>litejava-example-springmvcAnnotation</module>
         <module>litejava-example-jdbc</module>
         <module>litejava-example-jpa</module>
         <module>litejava-example-mybatis</module>
+        <module>litejava-example-kafka</module>
+        <module>litejava-example-rabbitmq</module>
+        <module>litejava-example-elasticsearch</module>
+        <module>litejava-example-s3</module>
+        <module>litejava-example-nacos</module>
+        <module>litejava-example-consul</module>
+        <module>litejava-example-session</module>
+        <module>litejava-example-multi-datasource</module>
+        <module>litejava-example-custom-app</module>
+        <module>litejava-example-springboot</module>
     </modules>
 </project>

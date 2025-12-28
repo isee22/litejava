@@ -12,11 +12,23 @@ import litejava.plugins.server.UndertowServerPlugin;
  */
 public class UndertowVirtualThreadPlugin extends UndertowServerPlugin {
     
+    public UndertowVirtualThreadPlugin() {
+        super();
+    }
+    
+    public UndertowVirtualThreadPlugin(int port) {
+        super(port);
+    }
+    
+    public UndertowVirtualThreadPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     @Override
     public void start() {
         try {
             Undertow.Builder builder = Undertow.builder()
-                .addHttpListener(app.port, host)
+                .addHttpListener(port, host)
                 .setHandler(this::handleRequestWithVirtualThread);
             
             if (ioThreads > 0) {
@@ -28,7 +40,7 @@ public class UndertowVirtualThreadPlugin extends UndertowServerPlugin {
             
             server = builder.build();
             server.start();
-            app.log.info("Undertow (Virtual Threads) started on " + host + ":" + app.port);
+            app.log.info("Undertow (Virtual Threads) started on " + host + ":" + port);
         } catch (Exception e) {
             throw new LiteJavaException("Failed to start Undertow server", e);
         }

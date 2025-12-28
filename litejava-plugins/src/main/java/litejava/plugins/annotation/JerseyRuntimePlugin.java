@@ -143,7 +143,7 @@ public class JerseyRuntimePlugin extends Plugin {
         basePath = app.conf.getString("jersey", "path", basePath);
         packages = app.conf.getString("jersey", "packages", packages);
         
-        // 应用配置
+        // 使用 Jersey 原生的包扫描
         if (packages != null && !packages.isEmpty()) {
             resourceConfig.packages(packages.split(","));
         }
@@ -153,8 +153,8 @@ public class JerseyRuntimePlugin extends Plugin {
         
         // 注册通配符路由，将请求转发给 Jersey
         String routePath = basePath.endsWith("/") ? basePath + "*path" : basePath + "/*path";
-        app.route("*", routePath, this::handleRequest);
-        app.route("*", basePath, this::handleRequest);
+        app.route("ANY", routePath, this::handleRequest);
+        app.route("ANY", basePath, this::handleRequest);
         
         app.log.info("JerseyRuntimePlugin configured at " + basePath);
     }
@@ -166,6 +166,8 @@ public class JerseyRuntimePlugin extends Plugin {
                 requestUri += "?" + ctx.query;
             }
             
+            // Jersey 的 baseUri 是应用根路径，requestUri 是完整请求路径
+            // Jersey 会用 requestUri - baseUri 来匹配 @Path
             URI baseUri = URI.create("http://localhost" + basePath + "/");
             URI fullUri = URI.create("http://localhost" + requestUri);
             
@@ -210,8 +212,9 @@ public class JerseyRuntimePlugin extends Plugin {
             }
             
         } catch (Exception e) {
+            app.log.error("Jersey error: " + e.getMessage());
             ctx.status(500);
-            ctx.json(java.util.Map.of("error", e.getMessage()));
+            ctx.json(litejava.util.Maps.of("error", e.getMessage() != null ? e.getMessage() : e.getClass().getName()));
         }
     }
     

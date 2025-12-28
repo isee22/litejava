@@ -566,8 +566,7 @@ public class Main {
         
         App app = new App();
         
-        // 从配置读取应用设置
-        app.port = config.getInt("app.port", 8080);
+        // 从配置读取应用设置（端口由 ServerPlugin 管理）
         app.devMode = config.getBool("app.devMode", true);
         
         // 插件使用子配置
@@ -592,10 +591,10 @@ public class Main {
 Config config = Config.load();
 config.require("database.url");      // 缺失时抛出 ConfigException
 config.require("database.user");
-config.requireInt("app.port");
+config.requireInt("server.port");
 
 // 批量验证
-config.requireAll("database.url", "database.user", "app.port");
+config.requireAll("database.url", "database.user", "server.port");
 ```
 
 #### 环境变量解析

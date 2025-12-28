@@ -3,6 +3,7 @@ package litejava.plugins.security;
 import litejava.Context;
 import litejava.MiddlewarePlugin;
 import litejava.Next;
+import litejava.util.Maps;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -69,6 +70,6 @@ public class BasicAuthPlugin extends MiddlewarePlugin {
         
         ctx.status(401)
            .header("WWW-Authenticate", "Basic realm=\"" + realm + "\"")
-           .json(Map.of("error", "Unauthorized"));
+           .json(Maps.of("error", "Unauthorized"));
     }
 }

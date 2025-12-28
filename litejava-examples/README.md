@@ -1,46 +1,46 @@
-# LiteJava 图书管理示例
+# LiteJava Examples
 
-使用 LiteJava 框架 + MySQL 构建的图书管理系统。
+LiteJava 框架示例项目集合。
 
-## 功能
+## 示例列表
 
-- 用户登录/登出/注册
-- 图书 CRUD (MySQL 存储)
-- 图书封面上传/下载
-- 静态文件服务
+| 项目 | 说明 | 外部依赖 |
+|------|------|----------|
+| `litejava-example-custom-app` | 自定义 App 配置 | 无 |
+| `litejava-example-guice` | Google Guice 依赖注入 | 无 |
+| `litejava-example-jdbc` | JDBC 数据库访问 | MySQL |
+| `litejava-example-mybatis` | MyBatis SQL 映射 | MySQL |
+| `litejava-example-jpa` | JPA ORM | MySQL |
+| `litejava-example-multi-datasource` | 多数据源（主从分离） | 无 (H2) |
+| `litejava-example-springmvcAnnotation` | Spring MVC 注解路由 | 无 |
+| `litejava-example-jaxrsAnnotation` | JAX-RS 注解路由 | 无 |
+| `litejava-example-jerseyAnnotation` | Jersey 运行时 | 无 |
+| `litejava-example-springboot` | Spring Boot 集成 | 无 |
+| `litejava-example-session` | Redis 分布式 Session | Redis |
+| `litejava-example-client` | 前端示例 (Vue) | Node.js |
 
-## 准备
-
-### 1. 创建 MySQL 数据库
-
-```sql
-CREATE DATABASE bookdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 2. 修改配置
-
-编辑 `config.yml` 中的数据库连接信息。
-
-## 运行
+## 运行示例
 
 ```bash
-cd litejava-example
-mvn exec:java -Dexec.mainClass="example.BookApp"
+# 构建
+mvn package -pl litejava-examples/litejava-example-jdbc -am -DskipTests -q
+
+# 运行
+java -jar litejava-examples/litejava-example-jdbc/target/litejava-example-jdbc-1.0.0-jdk8.jar
 ```
 
-访问 http://localhost:8080
+## 数据库配置
 
-## 默认账号
+需要 MySQL 的示例使用以下默认配置：
 
-- admin / admin123
-- user / user123
+```yaml
+datasource:
+  url: jdbc:mysql://localhost:3306/litejava?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+```
 
-## API
-
-- POST /api/auth/login - 登录
-- POST /api/auth/register - 注册  
-- GET /api/books - 图书列表
-- POST /api/books - 添加图书
-- PUT /api/books/:id - 更新图书
-- DELETE /api/books/:id - 删除图书
-- POST /api/upload/cover - 上传封面
+创建数据库：
+```sql
+CREATE DATABASE litejava CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```

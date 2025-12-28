@@ -24,14 +24,10 @@ import litejava.Next;
  */
 public class RequestLogPlugin extends MiddlewarePlugin {
     
-    /** 默认实例（单例访问） */
-    public static RequestLogPlugin instance;
-    
     public boolean enabled = true;
     public String format = "%s %s %d %dms";
     
     public RequestLogPlugin() {
-        instance = this;
     }
     
     @Override

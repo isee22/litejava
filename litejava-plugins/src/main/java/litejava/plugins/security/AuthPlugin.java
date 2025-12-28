@@ -3,6 +3,7 @@ package litejava.plugins.security;
 import litejava.Context;
 import litejava.MiddlewarePlugin;
 import litejava.Next;
+import litejava.util.Maps;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -23,9 +24,8 @@ import java.util.function.Function;
  * <h2>使用示例</h2>
  * <pre>{@code
  * // 方式1: 使用 JwtPlugin 验证
- * AuthPlugin auth = new AuthPlugin(token -> {
- *     return JwtPlugin.instance.verify(token);  // 返回 claims Map 或 null
- * });
+ * JwtPlugin jwt = app.getPlugin(JwtPlugin.class);
+ * AuthPlugin auth = new AuthPlugin(token -> jwt.verify(token));
  * app.use(auth);
  * 
  * // 方式2: 自定义验证逻辑
@@ -50,9 +50,6 @@ import java.util.function.Function;
  * }</pre>
  */
 public class AuthPlugin extends MiddlewarePlugin {
-    
-    /** 默认实例 */
-    public static AuthPlugin instance;
     
     /** 认证函数：token -> 用户信息 Map（null 表示认证失败） */
     public Function<String, Map<String, Object>> authenticator;
@@ -82,11 +79,9 @@ public class AuthPlugin extends MiddlewarePlugin {
     public int unauthorizedStatus = 401;
     
     public AuthPlugin() {
-        instance = this;
     }
     
     public AuthPlugin(Function<String, Map<String, Object>> authenticator) {
-        instance = this;
         this.authenticator = authenticator;
     }
     
@@ -154,7 +149,7 @@ public class AuthPlugin extends MiddlewarePlugin {
         // 认证
         if (authenticator == null) {
             // 没有设置认证函数，只检查 token 是否存在
-            ctx.state.put(stateKey, Map.of("token", token));
+            ctx.state.put(stateKey, Maps.of("token", token));
             next.run();
             return;
         }
@@ -183,6 +178,6 @@ public class AuthPlugin extends MiddlewarePlugin {
     }
     
     private void unauthorized(Context ctx) {
-        ctx.status(unauthorizedStatus).json(Map.of("error", unauthorizedMessage));
+        ctx.status(unauthorizedStatus).json(Maps.of("error", unauthorizedMessage));
     }
 }

@@ -28,11 +28,13 @@ litejava/
     ├── pom.xml
     └── src/main/java/litejava/plugins/
         ├── config/              # YamlConfPlugin
-        ├── database/            # DatabasePlugin, MyBatisPlugin
+        ├── dataSource/          # HikariPlugin, DruidPlugin
+        ├── database/            # JdbcPlugin, MyBatisPlugin, JpaPlugin
         ├── cache/               # RedisCachePlugin, MemcacheCachePlugin
         ├── view/                # ThymeleafPlugin, FreemarkerPlugin
         ├── http/                # CorsPlugin, RecoveryPlugin
         ├── health/              # HealthPlugin
+        ├── annotation/          # JaxRsAnnotationPlugin, SpringMvcAnnotationPlugin
         └── server/              # NettyServerPlugin, UndertowServerPlugin
 ```
 

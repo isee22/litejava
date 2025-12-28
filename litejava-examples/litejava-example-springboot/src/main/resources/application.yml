@@ -1,0 +1,56 @@
+# 服务器配置
+server:
+  port: 8080
+
+# 数据源配置
+datasource:
+  url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;INIT=RUNSCRIPT FROM 'classpath:schema.sql'
+  username: sa
+  password: ""
+  driver: org.h2.Driver
+
+# MyBatis 配置
+mybatis:
+  mapperPackage: example.mapper
+
+# Guice DI 配置
+guice:
+  packages: example.service
+
+# 定时任务（SpringBootConfApp 使用注解方式）
+# scheduler:
+#   packages: example.controller
+
+# Spring MVC 配置（SpringBootApp 编程式设置，不需要这里配置）
+# springmvc:
+#   packages: example.controller
+
+# ============================================
+# 以下为 SpringBootConfApp 纯配置方式使用
+# SpringBootApp 使用编程式配置，不需要这些
+# ============================================
+# plugins:
+#   # 全局异常处理
+#   litejava_plugins_http_RecoveryPlugin:
+#     enabled: true
+#     showStack: true
+#   
+#   # 模板引擎
+#   litejava_plugins_view_ThymeleafPlugin:
+#     enabled: true
+#     templateDir: templates/
+#   
+#   # 数据源
+#   litejava_plugins_dataSource_HikariPlugin: true
+#   
+#   # 缓存
+#   litejava_plugins_cache_MemoryCachePlugin: true
+#   
+#   # 定时任务
+#   litejava_plugins_schedule_SchedulePlugin: true
+#   
+#   # Spring MVC 注解路由
+#   litejava_plugins_annotation_SpringMvcAnnotationPlugin: true
+#   
+#   # DI（自动绑定插件 + @Singleton 类）
+#   litejava_plugins_di_GuicePlugin: true

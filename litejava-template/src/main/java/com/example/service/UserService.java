@@ -11,31 +11,35 @@ import java.util.List;
  */
 public class UserService {
     
-    public static final UserService instance = new UserService();
+    private final MyBatisPlugin mybatis;
+    
+    public UserService(MyBatisPlugin mybatis) {
+        this.mybatis = mybatis;
+    }
     
     public List<User> findAll() {
-        return MyBatisPlugin.instance.execute(UserMapper.class, UserMapper::findAll);
+        return mybatis.execute(UserMapper.class, UserMapper::findAll);
     }
     
     public User findById(Long id) {
-        return MyBatisPlugin.instance.execute(UserMapper.class, mapper -> mapper.findById(id));
+        return mybatis.execute(UserMapper.class, mapper -> mapper.findById(id));
     }
     
     public User findByUsername(String username) {
-        return MyBatisPlugin.instance.execute(UserMapper.class, mapper -> mapper.findByUsername(username));
+        return mybatis.execute(UserMapper.class, mapper -> mapper.findByUsername(username));
     }
     
     public User create(User user) {
-        MyBatisPlugin.instance.execute(UserMapper.class, mapper -> mapper.insert(user));
+        mybatis.execute(UserMapper.class, mapper -> mapper.insert(user));
         return user;
     }
     
     public User update(User user) {
-        MyBatisPlugin.instance.execute(UserMapper.class, mapper -> mapper.update(user));
+        mybatis.execute(UserMapper.class, mapper -> mapper.update(user));
         return findById(user.id);
     }
     
     public boolean delete(Long id) {
-        return MyBatisPlugin.instance.execute(UserMapper.class, mapper -> mapper.delete(id)) > 0;
+        return mybatis.execute(UserMapper.class, mapper -> mapper.delete(id)) > 0;
     }
 }

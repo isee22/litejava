@@ -1,6 +1,7 @@
 package litejava.plugins.grpc;
 
 import litejava.Plugin;
+import litejava.util.Maps;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -90,13 +91,13 @@ public class GrpcPlugin extends Plugin {
             
             ServiceDefinition service = services.get(serviceName);
             if (service == null) {
-                ctx.status(404).json(Map.of("error", "Service not found: " + serviceName));
+                ctx.status(404).json(Maps.of("error", "Service not found: " + serviceName));
                 return;
             }
             
             Function<Map<String, Object>, Object> handler = service.methods.get(methodName);
             if (handler == null) {
-                ctx.status(404).json(Map.of("error", "Method not found: " + methodName));
+                ctx.status(404).json(Maps.of("error", "Method not found: " + methodName));
                 return;
             }
             
@@ -105,7 +106,7 @@ public class GrpcPlugin extends Plugin {
                 Object response = handler.apply(request);
                 ctx.json(response);
             } catch (Exception e) {
-                ctx.status(500).json(Map.of("error", e.getMessage()));
+                ctx.status(500).json(Maps.of("error", e.getMessage()));
             }
         });
     }

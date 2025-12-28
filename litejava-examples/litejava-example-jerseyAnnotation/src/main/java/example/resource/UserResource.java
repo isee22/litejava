@@ -25,7 +25,9 @@ public class UserResource {
     
     @GET
     public Response list() {
-        return Response.ok(Map.of("list", new ArrayList<>(users.values()))).build();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("list", new ArrayList<>(users.values()));
+        return Response.ok(result).build();
     }
     
     @GET
@@ -33,7 +35,9 @@ public class UserResource {
     public Response get(@PathParam("id") long id) {
         Map<String, Object> user = users.get(id);
         if (user == null) {
-            return Response.status(404).entity(Map.of("error", "User not found")).build();
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("error", "User not found");
+            return Response.status(404).entity(error).build();
         }
         return Response.ok(user).build();
     }
@@ -43,7 +47,9 @@ public class UserResource {
         String name = (String) body.get("name");
         String email = (String) body.get("email");
         if (name == null || name.isEmpty()) {
-            return Response.status(400).entity(Map.of("error", "name is required")).build();
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("error", "name is required");
+            return Response.status(400).entity(error).build();
         }
         return Response.status(201).entity(createUser(name, email)).build();
     }
@@ -53,7 +59,9 @@ public class UserResource {
     public Response update(@PathParam("id") long id, Map<String, Object> body) {
         Map<String, Object> user = users.get(id);
         if (user == null) {
-            return Response.status(404).entity(Map.of("error", "User not found")).build();
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("error", "User not found");
+            return Response.status(404).entity(error).build();
         }
         if (body.containsKey("name")) user.put("name", body.get("name"));
         if (body.containsKey("email")) user.put("email", body.get("email"));
@@ -64,9 +72,13 @@ public class UserResource {
     @Path("/{id}")
     public Response delete(@PathParam("id") long id) {
         if (users.remove(id) == null) {
-            return Response.status(404).entity(Map.of("error", "User not found")).build();
+            Map<String, Object> error = new LinkedHashMap<>();
+            error.put("error", "User not found");
+            return Response.status(404).entity(error).build();
         }
-        return Response.ok(Map.of("deleted", true)).build();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("deleted", true);
+        return Response.ok(result).build();
     }
     
     private static Map<String, Object> createUser(String name, String email) {

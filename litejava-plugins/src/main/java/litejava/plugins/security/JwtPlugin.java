@@ -48,16 +48,15 @@ import io.jsonwebtoken.security.Keys;
  * app.use(new JwtPlugin("your-secret-key-at-least-32-chars"));
  * 
  * // 生成 token
- * String token = JwtPlugin.instance.sign(Map.of("userId", 123, "role", "admin"));
+ * JwtPlugin jwt = app.getPlugin(JwtPlugin.class);
+ * String token = jwt.sign(Map.of("userId", 123, "role", "admin"));
  * 
  * // 验证 token
- * Claims claims = JwtPlugin.instance.verify(token);
+ * Claims claims = jwt.verify(token);
  * int userId = claims.get("userId", Integer.class);
  * }</pre>
  */
 public class JwtPlugin extends Plugin {
-    
-    public static JwtPlugin instance;
     
     /** JWT 密钥（至少32字符） */
     public String secret;
@@ -68,12 +67,10 @@ public class JwtPlugin extends Plugin {
     private Key key;
     
     public JwtPlugin() {
-        instance = this;
         this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     }
     
     public JwtPlugin(String secret) {
-        instance = this;
         this.secret = secret;
         this.key = Keys.hmacShaKeyFor(secret.getBytes());
     }

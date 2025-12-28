@@ -47,6 +47,18 @@ public class UndertowServerPlugin extends ServerPlugin {
     public int ioThreads = 0;      // 0 = Undertow 默认 (CPU cores)
     public int workerThreads = 0;  // 0 = Undertow 默认 (CPU cores * 8)
     
+    public UndertowServerPlugin() {
+        super();
+    }
+    
+    public UndertowServerPlugin(int port) {
+        super(port);
+    }
+    
+    public UndertowServerPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     // Context 对象池
     private final ConcurrentLinkedQueue<Context> contextPool = new ConcurrentLinkedQueue<>();
     private static final int POOL_MAX_SIZE = 1024;
@@ -77,7 +89,7 @@ public class UndertowServerPlugin extends ServerPlugin {
     public void start() {
         try {
             Undertow.Builder builder = Undertow.builder()
-                .addHttpListener(app.port, host)
+                .addHttpListener(port, host)
                 .setHandler(this::handleRequest);
             
             if (ioThreads > 0) {
@@ -89,7 +101,7 @@ public class UndertowServerPlugin extends ServerPlugin {
             
             server = builder.build();
             server.start();
-            app.log.info("Undertow server started on " + host + ":" + app.port);
+            app.log.info("Undertow server started on " + host + ":" + port);
         } catch (Exception e) {
             throw new LiteJavaException("Failed to start Undertow server", e);
         }

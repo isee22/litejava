@@ -28,9 +28,6 @@ import litejava.Next;
  */
 public class CorsPlugin extends MiddlewarePlugin {
     
-    /** 默认实例（单例访问） */
-    public static CorsPlugin instance;
-    
     // 默认配置
     public String origin = "*";
     public String methods = "GET, POST, PUT, DELETE, PATCH, OPTIONS";
@@ -39,11 +36,9 @@ public class CorsPlugin extends MiddlewarePlugin {
     public boolean credentials = false;
     
     public CorsPlugin() {
-        instance = this;
     }
     
     public CorsPlugin(String origin) {
-        instance = this;
         this.origin = origin;
     }
     

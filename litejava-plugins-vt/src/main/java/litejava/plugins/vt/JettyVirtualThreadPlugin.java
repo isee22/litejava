@@ -18,6 +18,18 @@ import java.util.concurrent.Executors;
  */
 public class JettyVirtualThreadPlugin extends JettyServerPlugin {
     
+    public JettyVirtualThreadPlugin() {
+        super();
+    }
+    
+    public JettyVirtualThreadPlugin(int port) {
+        super(port);
+    }
+    
+    public JettyVirtualThreadPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     @Override
     public void start() {
         try {
@@ -29,7 +41,7 @@ public class JettyVirtualThreadPlugin extends JettyServerPlugin {
             org.eclipse.jetty.server.ServerConnector connector = 
                 new org.eclipse.jetty.server.ServerConnector(server);
             connector.setHost(host);
-            connector.setPort(app.port);
+            connector.setPort(port);
             server.addConnector(connector);
             
             // 使用虚拟线程执行器
@@ -42,7 +54,7 @@ public class JettyVirtualThreadPlugin extends JettyServerPlugin {
             
             server.start();
             
-            app.log.info("Jetty (Virtual Threads) started on " + host + ":" + app.port);
+            app.log.info("Jetty (Virtual Threads) started on " + host + ":" + port);
         } catch (Exception e) {
             throw new LiteJavaException("Failed to start Jetty server", e);
         }

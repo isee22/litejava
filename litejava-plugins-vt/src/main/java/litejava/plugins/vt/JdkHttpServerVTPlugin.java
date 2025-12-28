@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer;
 import litejava.Context;
 import litejava.exception.LiteJavaException;
 import litejava.plugin.ServerPlugin;
+import litejava.plugins.ObjectPool;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +23,19 @@ import java.util.concurrent.Executors;
 public class JdkHttpServerVTPlugin extends ServerPlugin {
     
     private HttpServer server;
+    
+    public JdkHttpServerVTPlugin() {
+        super();
+    }
+    
+    public JdkHttpServerVTPlugin(int port) {
+        super(port);
+    }
+    
+    public JdkHttpServerVTPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     private final ObjectPool<Context> contextPool = new ObjectPool<>(
         Context::new,
         ctx -> {
@@ -42,11 +56,11 @@ public class JdkHttpServerVTPlugin extends ServerPlugin {
     @Override
     public void start() {
         try {
-            server = HttpServer.create(new InetSocketAddress(host, app.port), backlog);
+            server = HttpServer.create(new InetSocketAddress(host, port), backlog);
             server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
             server.createContext("/", this::handleRequest);
             server.start();
-            app.log.info("JDK HttpServer (Virtual Threads) started on " + host + ":" + app.port);
+            app.log.info("JDK HttpServer (Virtual Threads) started on " + host + ":" + port);
         } catch (IOException e) {
             throw new LiteJavaException("Failed to start JDK HttpServer", e);
         }

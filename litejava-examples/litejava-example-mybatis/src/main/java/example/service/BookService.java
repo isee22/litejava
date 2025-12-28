@@ -12,10 +12,16 @@ import java.util.List;
  */
 public class BookService {
     
+    private final MyBatisPlugin mybatis;
+    
+    public BookService(MyBatisPlugin mybatis) {
+        this.mybatis = mybatis;
+    }
+    
     public Book create(Book book) {
         book.createdAt = new Timestamp(System.currentTimeMillis());
         book.updatedAt = book.createdAt;
-        MyBatisPlugin.instance.tx(session -> {
+        mybatis.tx(session -> {
             session.getMapper(BookMapper.class).insert(book);
             return null;
         });
@@ -23,19 +29,19 @@ public class BookService {
     }
     
     public Book getById(long id) {
-        return MyBatisPlugin.instance.execute(BookMapper.class, m -> m.findById(id));
+        return mybatis.execute(BookMapper.class, m -> m.findById(id));
     }
     
     public List<Book> search(String keyword) {
         if (keyword == null || keyword.isEmpty()) {
-            return MyBatisPlugin.instance.execute(BookMapper.class, BookMapper::findAll);
+            return mybatis.execute(BookMapper.class, BookMapper::findAll);
         }
-        return MyBatisPlugin.instance.execute(BookMapper.class, m -> m.search("%" + keyword + "%"));
+        return mybatis.execute(BookMapper.class, m -> m.search("%" + keyword + "%"));
     }
     
     public Book update(Book book) {
         book.updatedAt = new Timestamp(System.currentTimeMillis());
-        MyBatisPlugin.instance.tx(session -> {
+        mybatis.tx(session -> {
             session.getMapper(BookMapper.class).update(book);
             return null;
         });
@@ -43,7 +49,7 @@ public class BookService {
     }
     
     public boolean delete(long id) {
-        MyBatisPlugin.instance.tx(session -> {
+        mybatis.tx(session -> {
             session.getMapper(BookMapper.class).delete(id);
             return null;
         });

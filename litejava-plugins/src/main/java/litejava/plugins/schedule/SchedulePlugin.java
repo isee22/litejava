@@ -1,69 +1,125 @@
 package litejava.plugins.schedule;
 
 import litejava.Plugin;
+import litejava.plugin.ClassScanner;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
+
+import java.lang.reflect.Method;
+import java.util.function.Function;
 
 /**
  * 定时任务插件 - 基于 Quartz 实现
  * 
- * <h2>依赖</h2>
- * <pre>{@code
- * <dependency>
- *     <groupId>org.quartz-scheduler</groupId>
- *     <artifactId>quartz</artifactId>
- *     <version>2.3.2</version>
- * </dependency>
- * }</pre>
- * 
- * <h2>使用示例</h2>
- * <pre>{@code
- * SchedulePlugin schedule = new SchedulePlugin();
- * app.use(schedule);
- * app.listen();
- * 
- * // 每5秒执行
- * schedule.cron("0/5 * * * * ?", () -> System.out.println("每5秒"));
- * 
- * // 每天凌晨2点执行
- * schedule.cron("0 0 2 * * ?", () -> cleanupOldData());
- * 
- * // 每小时执行
- * schedule.cron("0 0 * * * ?", () -> syncData());
- * 
- * // 取消任务
- * String jobId = schedule.cron("0/10 * * * * ?", () -> doSomething());
- * schedule.cancel(jobId);
- * }</pre>
- * 
- * <h2>Cron 表达式</h2>
+ * <h2>配置 (application.yml)</h2>
  * <pre>
- * 秒 分 时 日 月 周
- * 0/5 * * * * ?   = 每5秒
- * 0 0 2 * * ?     = 每天凌晨2点
- * 0 30 * * * ?    = 每小时30分
- * 0 0 0 1 * ?     = 每月1号0点
+ * scheduler:
+ *   packages: example.controller
  * </pre>
+ * 
+ * <h2>方式一：注解</h2>
+ * <pre>{@code
+ * @Scheduled("0 * * * * ?")
+ * public void statsTask() { ... }
+ * }</pre>
+ * 
+ * <h2>方式二：编程式</h2>
+ * <pre>{@code
+ * schedule.cron("0/5 * * * * ?", () -> System.out.println("每5秒"));
+ * }</pre>
  */
 public class SchedulePlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static SchedulePlugin instance;
-    
     public Scheduler scheduler;
-    private int jobCounter = 0;
     
-    public SchedulePlugin() {
-        instance = this;
-    }
+    /** 扫描包（逗号分隔） */
+    public String packages;
+    
+    /** 实例提供者（用于获取类实例） */
+    public Function<Class<?>, Object> instanceProvider;
+    
+    private int jobCounter = 0;
+    private int registeredCount = 0;
     
     @Override
     public void config() {
+        packages = app.conf.getString("scheduler", "packages", packages);
+        
         try {
             scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
         } catch (SchedulerException e) {
             throw new RuntimeException("Failed to start scheduler", e);
+        }
+        
+        // 在服务器启动后扫描 @Scheduled 注解（确保 DI 已初始化）
+        if (packages != null && !packages.isEmpty()) {
+            app.onStarted(this::scanScheduledMethods);
+        }
+    }
+    
+    private void scanScheduledMethods() {
+        ClassScanner scanner = ClassScanner.getInstance();
+        
+        for (String pkg : packages.split(",")) {
+            String trimmed = pkg.trim();
+            if (!trimmed.isEmpty()) {
+                for (Class<?> clazz : scanner.scan(trimmed)) {
+                    registerScheduledMethods(clazz);
+                }
+            }
+        }
+        
+        if (registeredCount > 0) {
+            app.log.info("SchedulePlugin: " + registeredCount + " scheduled task(s) registered");
+        }
+    }
+    
+    private void registerScheduledMethods(Class<?> clazz) {
+        for (Method method : clazz.getDeclaredMethods()) {
+            Scheduled scheduled = method.getAnnotation(Scheduled.class);
+            if (scheduled != null) {
+                String cronExpr = scheduled.value();
+                if (!cronExpr.isEmpty()) {
+                    Object instance = getInstance(clazz);
+                    if (instance != null) {
+                        cron(cronExpr, () -> {
+                            try {
+                                method.setAccessible(true);
+                                method.invoke(instance);
+                            } catch (Exception e) {
+                                app.log.error("Scheduled task failed: " + clazz.getSimpleName() + "." + method.getName() + " - " + e.getMessage());
+                            }
+                        });
+                        registeredCount++;
+                        app.log.info("  -> " + clazz.getSimpleName() + "." + method.getName() + "() [" + cronExpr + "]");
+                    }
+                }
+            }
+        }
+    }
+    
+    private Object getInstance(Class<?> clazz) {
+        if (instanceProvider != null) {
+            try {
+                return instanceProvider.apply(clazz);
+            } catch (Exception e) {
+                // fallback
+            }
+        }
+        Plugin guice = app.plugins.get("GuicePlugin");
+        if (guice != null) {
+            try {
+                Method getMethod = guice.getClass().getMethod("get", Class.class);
+                return getMethod.invoke(guice, clazz);
+            } catch (Exception e) {
+                // fallback
+            }
+        }
+        try {
+            return clazz.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            return null;
         }
     }
     
@@ -78,7 +134,6 @@ public class SchedulePlugin extends Plugin {
     
     /**
      * 添加 Cron 任务
-     * @return jobId 用于取消任务
      */
     public String cron(String cronExpr, Runnable task) {
         String jobId = "job_" + (++jobCounter);

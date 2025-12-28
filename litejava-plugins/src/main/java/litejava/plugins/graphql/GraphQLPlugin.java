@@ -6,7 +6,10 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.idl.*;
 import litejava.Context;
 import litejava.Plugin;
+import litejava.util.Maps;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -83,28 +86,34 @@ public class GraphQLPlugin extends Plugin {
         try {
             Map<String, Object> body;
             if ("GET".equals(ctx.method)) {
-                body = Map.of("query", ctx.queryParam("query", ""),
-                    "variables", ctx.queryParam("variables") != null 
-                        ? ctx.app.json.parseMap(ctx.queryParam("variables")) : Map.of());
+                Map<String, Object> vars = ctx.queryParam("variables") != null 
+                    ? ctx.app.json.parseMap(ctx.queryParam("variables")) 
+                    : Collections.emptyMap();
+                body = Maps.of("query", ctx.queryParam("query", ""), "variables", vars);
             } else {
                 body = ctx.bindJSON();
             }
             
             String query = (String) body.get("query");
             if (query == null || query.isEmpty()) {
-                ctx.status(400).json(Map.of("errors", new Object[]{Map.of("message", "Query required")}));
+                Map<String, Object> err = Maps.of("message", "Query required");
+                ctx.status(400).json(Maps.of("errors", new Object[]{err}));
                 return;
             }
             
-            Map<String, Object> variables = (Map<String, Object>) body.getOrDefault("variables", Map.of());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> variables = (Map<String, Object>) body.getOrDefault("variables", Collections.emptyMap());
             ExecutionResult result = graphQL.execute(b -> b.query(query).variables(variables)
                 .operationName((String) body.get("operationName")));
             
-            ctx.json(result.getErrors().isEmpty() 
-                ? Map.of("data", result.getData())
-                : Map.of("data", result.getData(), "errors", result.getErrors()));
+            if (result.getErrors().isEmpty()) {
+                ctx.json(Maps.of("data", result.getData()));
+            } else {
+                ctx.json(Maps.of("data", result.getData(), "errors", result.getErrors()));
+            }
         } catch (Exception e) {
-            ctx.status(500).json(Map.of("errors", new Object[]{Map.of("message", e.getMessage())}));
+            Map<String, Object> err = Maps.of("message", e.getMessage());
+            ctx.status(500).json(Maps.of("errors", new Object[]{err}));
         }
     }
     

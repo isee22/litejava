@@ -14,7 +14,11 @@ import java.util.Map;
  */
 public class UserController {
     
-    private final UserService userService = UserService.instance;
+    private final UserService userService;
+    
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
     
     public Routes routes() {
         return new Routes()
@@ -34,9 +38,6 @@ public class UserController {
     
     // ==================== 页面 ====================
     
-    /**
-     * 用户列表页
-     */
     void listPage(Context ctx) {
         List<User> users = userService.findAll();
         Map<String, Object> data = new HashMap<>();
@@ -45,18 +46,12 @@ public class UserController {
         ctx.render("users/list", data);
     }
     
-    /**
-     * 新建用户页
-     */
     void newPage(Context ctx) {
         Map<String, Object> data = new HashMap<>();
         data.put("title", "新建用户");
         ctx.render("users/form", data);
     }
     
-    /**
-     * 用户详情页
-     */
     void detailPage(Context ctx) {
         Long id = ctx.pathParam("id", Long.class);
         User user = userService.findById(id);
@@ -70,9 +65,6 @@ public class UserController {
         ctx.render("users/detail", data);
     }
     
-    /**
-     * 编辑用户页
-     */
     void editPage(Context ctx) {
         Long id = ctx.pathParam("id", Long.class);
         User user = userService.findById(id);
@@ -88,17 +80,11 @@ public class UserController {
     
     // ==================== API ====================
     
-    /**
-     * 获取用户列表
-     */
     void list(Context ctx) {
         List<User> users = userService.findAll();
         ctx.ok(Map.of("users", users, "total", users.size()));
     }
     
-    /**
-     * 获取单个用户
-     */
     void get(Context ctx) {
         Long id = ctx.pathParam("id", Long.class);
         User user = userService.findById(id);
@@ -109,36 +95,24 @@ public class UserController {
         }
     }
     
-    /**
-     * 创建用户
-     */
     void create(Context ctx) {
         User user = ctx.bindJSON(User.class);
-        
         if (user.username == null || user.username.isEmpty()) {
             ctx.fail(400, -1, "用户名不能为空");
             return;
         }
-        
         User created = userService.create(user);
         ctx.status(201).ok(created);
     }
     
-    /**
-     * 更新用户
-     */
     void update(Context ctx) {
         Long id = ctx.pathParam("id", Long.class);
         User user = ctx.bindJSON(User.class);
         user.id = id;
-        
         User updated = userService.update(user);
         ctx.ok(updated);
     }
     
-    /**
-     * 删除用户
-     */
     void delete(Context ctx) {
         Long id = ctx.pathParam("id", Long.class);
         if (userService.delete(id)) {

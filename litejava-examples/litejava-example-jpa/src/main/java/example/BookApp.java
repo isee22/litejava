@@ -15,8 +15,12 @@ public class BookApp {
         App app = LiteJava.create();
         
         // 插件
-        app.use(new JpaPlugin());
+        JpaPlugin jpa = new JpaPlugin();
+        app.use(jpa);
         app.use(new CorsPlugin());
+        
+        // 初始化 DAO
+        Dao.init(jpa);
         
         // 路由
         app.register(new BookController().routes());

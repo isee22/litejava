@@ -2,6 +2,7 @@ package litejava.plugin;
 
 import litejava.*;
 import litejava.exception.LiteJavaException;
+import litejava.util.Maps;
 
 import java.io.*;
 import java.nio.file.*;
@@ -157,9 +158,6 @@ import java.util.*;
  */
 public class FilePlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static FilePlugin instance;
-    
     // ==================== 配置项 ====================
     
     /** 单文件最大大小（字节），默认 10MB */
@@ -225,7 +223,6 @@ public class FilePlugin extends Plugin {
     // ==================== 构造函数 ====================
     
     public FilePlugin() {
-        instance = this;
     }
     
     // ==================== 链式配置 ====================
@@ -289,8 +286,6 @@ public class FilePlugin extends Plugin {
     
     @Override
     public void config() {
-        instance = this;
-        
         // 从配置文件读取
         maxFileSize = app.conf.getLong("file", "maxFileSize", maxFileSize);
         maxRequestSize = app.conf.getLong("file", "maxRequestSize", maxRequestSize);
@@ -616,7 +611,7 @@ public class FilePlugin extends Plugin {
      */
     public void download(Context ctx, File file, String filename) throws IOException {
         if (!file.exists()) {
-            ctx.status(404).json(Map.of("error", "File not found"));
+            ctx.status(404).json(Maps.of("error", "File not found"));
             return;
         }
         
@@ -681,7 +676,7 @@ public class FilePlugin extends Plugin {
      */
     public void inline(Context ctx, File file, String filename) throws IOException {
         if (!file.exists()) {
-            ctx.status(404).json(Map.of("error", "File not found"));
+            ctx.status(404).json(Maps.of("error", "File not found"));
             return;
         }
         

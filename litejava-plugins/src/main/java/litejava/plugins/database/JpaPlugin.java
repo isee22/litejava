@@ -84,9 +84,6 @@ import java.util.Map;
  */
 public class JpaPlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static JpaPlugin instance;
-    
     /** JPA EntityManagerFactory，初始化后可用 */
     public EntityManagerFactory emf;
     
@@ -94,11 +91,9 @@ public class JpaPlugin extends Plugin {
     public String persistenceUnit = "default";
     
     public JpaPlugin() {
-        instance = this;
     }
     
     public JpaPlugin(String persistenceUnit) {
-        instance = this;
         this.persistenceUnit = persistenceUnit;
     }
     

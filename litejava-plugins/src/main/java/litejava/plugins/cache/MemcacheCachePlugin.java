@@ -1,5 +1,6 @@
 package litejava.plugins.cache;
 
+import litejava.plugin.CachePlugin;
 import net.spy.memcached.MemcachedClient;
 
 import java.net.InetSocketAddress;
@@ -54,13 +55,34 @@ public class MemcacheCachePlugin extends CachePlugin {
     public int port = 11211;
     public int defaultTtl = 0;  // 0 = 永不过期
     
+    public MemcacheCachePlugin() {
+    }
+    
+    /**
+     * 构造函数 - 指定主机
+     */
+    public MemcacheCachePlugin(String host) {
+        this.host = host;
+    }
+    
+    /**
+     * 构造函数 - 指定主机和端口
+     */
+    public MemcacheCachePlugin(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
+    
     @Override
     public void config() {
+        super.config();
+        
         host = app.conf.getString("memcache", "host", host);
         port = app.conf.getInt("memcache", "port", port);
         
         try {
             client = new MemcachedClient(new InetSocketAddress(host, port));
+            app.log.info("MemcacheCachePlugin: Connected to " + host + ":" + port);
         } catch (Exception e) {
             throw new RuntimeException("Failed to connect to Memcache", e);
         }

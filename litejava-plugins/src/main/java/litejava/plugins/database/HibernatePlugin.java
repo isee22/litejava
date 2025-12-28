@@ -81,9 +81,6 @@ import java.util.List;
  */
 public class HibernatePlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static HibernatePlugin instance;
-    
     /** Hibernate SessionFactory，初始化后可用 */
     public SessionFactory sessionFactory;
     
@@ -94,20 +91,26 @@ public class HibernatePlugin extends Plugin {
     public List<Class<?>> entities = new ArrayList<>();
     
     public HibernatePlugin() {
-        instance = this;
     }
     
     @Override
     public void config() {
         Configuration cfg = new Configuration();
         
-        // 数据库配置
+        // 数据库配置（必需）
         String url = app.conf.getString("hibernate", "url", null);
-        if (url != null) {
-            cfg.setProperty("hibernate.connection.url", url);
-            cfg.setProperty("hibernate.connection.username", app.conf.getString("hibernate", "username", ""));
-            cfg.setProperty("hibernate.connection.password", app.conf.getString("hibernate", "password", ""));
-            cfg.setProperty("hibernate.connection.driver_class", app.conf.getString("hibernate", "driver", ""));
+        if (url == null || url.isEmpty()) {
+            throw new litejava.exception.LiteJavaException(
+                "HibernatePlugin: Missing required configuration 'hibernate.url'");
+        }
+        
+        cfg.setProperty("hibernate.connection.url", url);
+        cfg.setProperty("hibernate.connection.username", app.conf.getString("hibernate", "username", ""));
+        cfg.setProperty("hibernate.connection.password", app.conf.getString("hibernate", "password", ""));
+        
+        String driver = app.conf.getString("hibernate", "driver", null);
+        if (driver != null && !driver.isEmpty()) {
+            cfg.setProperty("hibernate.connection.driver_class", driver);
         }
         
         String dialect = app.conf.getString("hibernate", "dialect", null);

@@ -1,8 +1,7 @@
 package example.dao;
 
+import example.infra.Db;
 import example.model.Book;
-import litejava.plugins.cache.CachePlugin;
-import litejava.plugins.database.JdbcPlugin;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -14,7 +13,7 @@ import java.util.List;
 public class BookDao {
     
     private JdbcTemplate jdbc() {
-        return JdbcPlugin.instance.jdbcTemplate;
+        return Db.jdbc();
     }
     
     private static final RowMapper<Book> ROW_MAPPER = (rs, rowNum) -> {
@@ -31,16 +30,13 @@ public class BookDao {
     };
     
     public Book findById(long id) {
-        return CachePlugin.instance.getOrLoad("book:" + id, () -> {
-            List<Book> list = jdbc().query(
-                "SELECT * FROM books WHERE id = ?", ROW_MAPPER, id);
-            return list.isEmpty() ? null : list.get(0);
-        });
+        List<Book> list = jdbc().query(
+            "SELECT * FROM books WHERE id = ?", ROW_MAPPER, id);
+        return list.isEmpty() ? null : list.get(0);
     }
     
     public List<Book> findAll() {
-        return CachePlugin.instance.getOrLoad("book:all", () -> 
-            jdbc().query("SELECT * FROM books ORDER BY id DESC", ROW_MAPPER));
+        return jdbc().query("SELECT * FROM books ORDER BY id DESC", ROW_MAPPER);
     }
     
     public List<Book> search(String keyword) {
@@ -54,22 +50,15 @@ public class BookDao {
         jdbc().update(
             "INSERT INTO books (title, author, isbn, description, cover_image) VALUES (?, ?, ?, ?, ?)",
             book.title, book.author, book.isbn, book.description, book.coverImage);
-        CachePlugin.instance.del("book:all");
     }
     
     public int update(Book book) {
-        int rows = jdbc().update(
+        return jdbc().update(
             "UPDATE books SET title = ?, author = ?, isbn = ?, description = ?, cover_image = ? WHERE id = ?",
             book.title, book.author, book.isbn, book.description, book.coverImage, book.id);
-        CachePlugin.instance.del("book:" + book.id);
-        CachePlugin.instance.del("book:all");
-        return rows;
     }
     
     public int delete(long id) {
-        int rows = jdbc().update("DELETE FROM books WHERE id = ?", id);
-        CachePlugin.instance.del("book:" + id);
-        CachePlugin.instance.del("book:all");
-        return rows;
+        return jdbc().update("DELETE FROM books WHERE id = ?", id);
     }
 }

@@ -70,6 +70,18 @@ public class HttpServerPlugin extends ServerPlugin {
     /** 请求处理线程池 */
     public ExecutorService executor;
     
+    public HttpServerPlugin() {
+        super();
+    }
+    
+    public HttpServerPlugin(int port) {
+        super(port);
+    }
+    
+    public HttpServerPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     // ==================== Context 对象池 ====================
     
     /** 对象池，减少 GC 压力 */
@@ -106,7 +118,7 @@ public class HttpServerPlugin extends ServerPlugin {
     @Override
     public void start() {
         try {
-            server = HttpServer.create(new InetSocketAddress(host, app.port), backlog);
+            server = HttpServer.create(new InetSocketAddress(host, port), backlog);
             server.createContext("/", this::handleRequest);
             
             // 使用配置的线程池
@@ -118,7 +130,7 @@ public class HttpServerPlugin extends ServerPlugin {
             server.setExecutor(executor);
             server.start();
         } catch (IOException e) {
-            throw new LiteJavaException("Failed to start server on port " + app.port, e);
+            throw new LiteJavaException("Failed to start server on port " + port, e);
         }
     }
     

@@ -4,6 +4,7 @@ import litejava.App;
 import litejava.plugin.ConfPlugin;
 import litejava.plugin.StaticFilePlugin;
 import litejava.plugins.database.JdbcPlugin;
+import litejava.plugins.dataSource.HikariPlugin;
 import litejava.plugins.json.JacksonPlugin;
 import litejava.plugins.log.Slf4jLogPlugin;
 import litejava.plugins.server.JettyServerPlugin;
@@ -21,9 +22,13 @@ public class LiteJavaServer {
         app.use(new ConfPlugin("benchmark.properties"));
         app.use(new JacksonPlugin());
         
-        JdbcPlugin jdbc = new JdbcPlugin("db");
+        HikariPlugin hikari = new HikariPlugin("db");
+        app.use(hikari);
+        JdbcPlugin jdbc = new JdbcPlugin(hikari);
         app.use(jdbc);
-        app.use(new JettyServerPlugin());
+        
+        int port = app.conf.getInt("server", "litejava.port", 8181);
+        app.use(new JettyServerPlugin(port));
         app.use(new ThymeleafPlugin("templates/"));
         app.use(new StaticFilePlugin("/static", "static"));
         
@@ -59,8 +64,7 @@ public class LiteJavaServer {
             ));
         });
         
-        int port = app.conf.getInt("server", "litejava.port", 8181);
-        app.run(port);
+        app.run();
         System.out.println("LiteJava started in " + (System.currentTimeMillis() - start) + "ms on port " + port);
     }
     

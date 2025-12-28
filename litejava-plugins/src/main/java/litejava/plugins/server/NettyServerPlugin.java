@@ -53,6 +53,18 @@ public class NettyServerPlugin extends ServerPlugin {
     public int bossThreads = 1;
     public int workerThreads = 0;  // 0 = Netty 默认 (CPU cores * 2)
     
+    public NettyServerPlugin() {
+        super();
+    }
+    
+    public NettyServerPlugin(int port) {
+        super(port);
+    }
+    
+    public NettyServerPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     // Context 对象池 (类似 Gin sync.Pool)
     private final ConcurrentLinkedQueue<Context> contextPool = new ConcurrentLinkedQueue<>();
     private static final int POOL_MAX_SIZE = 1024;
@@ -103,8 +115,8 @@ public class NettyServerPlugin extends ServerPlugin {
                     }
                 });
             
-            channel = b.bind(host, app.port).sync().channel();
-            app.log.info("Netty server started on " + host + ":" + app.port);
+            channel = b.bind(host, port).sync().channel();
+            app.log.info("Netty server started on " + host + ":" + port);
         } catch (Exception e) {
             throw new LiteJavaException("Failed to start Netty server", e);
         }

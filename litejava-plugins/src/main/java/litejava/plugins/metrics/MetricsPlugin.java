@@ -37,7 +37,6 @@ import litejava.Next;
  */
 public class MetricsPlugin extends MiddlewarePlugin {
     
-    public static MetricsPlugin instance;
     public String path = "/metrics";
     public boolean collectJvm = true;
     public PrometheusMeterRegistry registry;
@@ -45,7 +44,6 @@ public class MetricsPlugin extends MiddlewarePlugin {
     private Timer.Builder requestTimer;
     
     public MetricsPlugin() {
-        instance = this;
     }
     
     @Override

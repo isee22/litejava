@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+# 主库 - 写操作
+datasource.primary:
+  url: jdbc:h2:mem:primary;DB_CLOSE_DELAY=-1
+  username: sa
+  password: ""
+
+# 从库 - 读操作  
+datasource.secondary:
+  url: jdbc:h2:mem:secondary;DB_CLOSE_DELAY=-1
+  username: sa
+  password: ""

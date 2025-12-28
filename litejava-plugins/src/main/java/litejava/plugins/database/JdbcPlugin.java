@@ -1,60 +1,43 @@
 package litejava.plugins.database;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import litejava.Plugin;
+import javax.sql.DataSource;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import litejava.Plugin;
+import litejava.plugins.dataSource.DataSourcePlugin;
+
 /**
- * JDBC 插件 - 基于 HikariCP + Spring JdbcTemplate
+ * JDBC 插件 - 基于 Spring JdbcTemplate
  * 
- * <h2>依赖</h2>
- * <pre>{@code
- * <dependency>
- *     <groupId>com.zaxxer</groupId>
- *     <artifactId>HikariCP</artifactId>
- *     <version>4.0.3</version>
- * </dependency>
- * <dependency>
- *     <groupId>org.springframework</groupId>
- *     <artifactId>spring-jdbc</artifactId>
- *     <version>5.3.31</version>
- * </dependency>
- * }</pre>
- * 
- * <h2>配置</h2>
- * <pre>{@code
- * jdbc.url=jdbc:mysql://localhost:3306/mydb
- * jdbc.username=root
- * jdbc.password=root
- * jdbc.pool.maxSize=10
- * }</pre>
+ * <h2>配置 (application.yml)</h2>
+ * <pre>
+ * datasource:
+ *   url: jdbc:mysql://localhost:3306/mydb
+ *   username: root
+ *   password: root
+ * </pre>
  * 
  * <h2>使用示例</h2>
  * <pre>{@code
- * // 注册插件
- * JdbcPlugin jdbc = new JdbcPlugin();
- * app.use(jdbc);
+ * // 单数据源
+ * HikariPlugin hikari = new HikariPlugin();
+ * app.use(hikari);
+ * app.use(new JdbcPlugin(hikari));
+ * 
+ * // 多数据源
+ * HikariPlugin primary = new HikariPlugin("datasource.primary");
+ * HikariPlugin secondary = new HikariPlugin("datasource.secondary");
+ * app.use(primary);
+ * app.use(secondary);
+ * app.use("primaryJdbc", new JdbcPlugin(primary));
+ * app.use("secondaryJdbc", new JdbcPlugin(secondary));
  * 
  * // 查询
+ * JdbcPlugin jdbc = app.getPlugin(JdbcPlugin.class);
  * List<Map<String, Object>> users = jdbc.jdbcTemplate.queryForList("SELECT * FROM users");
- * 
- * // 带参数查询
- * User user = jdbc.jdbcTemplate.queryForObject(
- *     "SELECT * FROM users WHERE id = ?",
- *     (rs, i) -> {
- *         User u = new User();
- *         u.id = rs.getLong("id");
- *         u.name = rs.getString("name");
- *         return u;
- *     },
- *     userId
- * );
- * 
- * // 插入/更新
- * jdbc.jdbcTemplate.update("INSERT INTO users (name, email) VALUES (?, ?)", name, email);
  * 
  * // 事务
  * jdbc.txTemplate.execute(status -> {
@@ -62,104 +45,49 @@ import org.springframework.transaction.support.TransactionTemplate;
  *     jdbc.jdbcTemplate.update("UPDATE accounts SET balance = balance + ? WHERE id = ?", amount, toId);
  *     return null;
  * });
- * 
- * // 多数据源
- * JdbcPlugin primary = new JdbcPlugin("jdbc.primary");
- * JdbcPlugin secondary = new JdbcPlugin("jdbc.secondary");
- * app.use(primary);
- * app.use(secondary);
  * }</pre>
  * 
- * <h2>vs 其他数据库插件</h2>
- * <ul>
- *   <li>JdbcPlugin - 轻量级，直接写 SQL，适合简单场景</li>
- *   <li>MyBatisPlugin - SQL 映射，适合复杂查询</li>
- *   <li>JpaPlugin/HibernatePlugin - ORM，适合领域模型</li>
- * </ul>
+ * @see DataSourcePlugin 数据源插件基类
+ * @see litejava.plugins.dataSource.HikariPlugin HikariCP 数据源
  */
 public class JdbcPlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static JdbcPlugin instance;
+    /** 数据源插件 */
+    private final DataSourcePlugin dataSourcePlugin;
     
-    /** HikariCP 数据源 */
-    public HikariDataSource dataSource;
-    
-    /** Spring JdbcTemplate，用于执行 SQL */
+    /** Spring JdbcTemplate */
     public JdbcTemplate jdbcTemplate;
     
-    /** Spring TransactionTemplate，用于事务管理 */
+    /** Spring TransactionTemplate */
     public TransactionTemplate txTemplate;
     
-    /** 配置前缀，默认 "jdbc" */
-    public String configPrefix = "jdbc";
-    
     /**
-     * 创建 JdbcPlugin 实例，自动检测是否使用虚拟线程版本
-     * 需要 Java 21+ 且 classpath 中有 JdbcVirtualThreadPlugin
+     * 构造 JdbcPlugin
      * 
-     * @param useVirtualThreads 是否使用虚拟线程
-     * @return JdbcPlugin 或 JdbcVirtualThreadPlugin 实例
+     * @param dataSourcePlugin 数据源插件（必须）
      */
-    public static JdbcPlugin create(boolean useVirtualThreads) {
-        return create(useVirtualThreads, "jdbc");
-    }
-    
-    /**
-     * 创建 JdbcPlugin 实例，自动检测是否使用虚拟线程版本
-     * 
-     * @param useVirtualThreads 是否使用虚拟线程
-     * @param configPrefix 配置前缀
-     * @return JdbcPlugin 或 JdbcVirtualThreadPlugin 实例
-     */
-    public static JdbcPlugin create(boolean useVirtualThreads, String configPrefix) {
-        if (useVirtualThreads) {
-            try {
-                Class<?> vtClass = Class.forName("litejava.plugins.vt.JdbcVirtualThreadPlugin");
-                return (JdbcPlugin) vtClass.getConstructor(String.class).newInstance(configPrefix);
-            } catch (Exception e) {
-                throw new RuntimeException("JdbcVirtualThreadPlugin not found. Add litejava-plugins-vt dependency.", e);
-            }
-        }
-        return new JdbcPlugin(configPrefix);
-    }
-    
-    public JdbcPlugin() {
-        instance = this;
-    }
-    
-    public JdbcPlugin(String configPrefix) {
-        instance = this;
-        this.configPrefix = configPrefix;
+    public JdbcPlugin(DataSourcePlugin dataSourcePlugin) {
+        this.dataSourcePlugin = dataSourcePlugin;
     }
     
     @Override
     public void config() {
-        HikariConfig config = createHikariConfig();
-        
-        dataSource = new HikariDataSource(config);
+        DataSource dataSource = dataSourcePlugin.dataSource;
         jdbcTemplate = new JdbcTemplate(dataSource);
         txTemplate = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
         
-        app.log.info("JdbcPlugin configured (" + configPrefix + ")");
+        app.log.info("JdbcPlugin: Ready");
     }
     
     /**
-     * 创建 HikariConfig，子类可覆盖以自定义配置
+     * 获取数据源
      */
-    protected HikariConfig createHikariConfig() {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(app.conf.getString(configPrefix, "url", null));
-        config.setUsername(app.conf.getString(configPrefix, "username", null));
-        config.setPassword(app.conf.getString(configPrefix, "password", null));
-        config.setMaximumPoolSize(app.conf.getInt(configPrefix + ".pool", "maxSize", 10));
-        return config;
+    public DataSource getDataSource() {
+        return dataSourcePlugin.dataSource;
     }
     
     @Override
     public void uninstall() {
-        if (dataSource != null) {
-            dataSource.close();
-        }
+        // 不关闭 DataSourcePlugin，由 App 统一管理
     }
 }

@@ -3,6 +3,7 @@ package litejava.plugins.security;
 import litejava.Context;
 import litejava.MiddlewarePlugin;
 import litejava.Next;
+import litejava.util.Maps;
 
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +79,7 @@ public class CsrfPlugin extends MiddlewarePlugin {
         }
         
         if (!token.equals(requestToken)) {
-            ctx.status(403).json(Map.of("error", "Invalid CSRF token"));
+            ctx.status(403).json(Maps.of("error", "Invalid CSRF token"));
             return;
         }
         

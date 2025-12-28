@@ -9,7 +9,7 @@ package litejava;
  *   <li>配置插件：ConfPlugin, YamlConfPlugin</li>
  *   <li>JSON 插件：JsonPlugin, JacksonPlugin, GsonPlugin</li>
  *   <li>中间件插件：CorsPlugin, LogPlugin, RecoveryPlugin</li>
- *   <li>数据库插件：DatabasePlugin, MyBatisPlugin</li>
+ *   <li>数据库插件：JdbcPlugin, MyBatisPlugin, JpaPlugin</li>
  *   <li>缓存插件：MemoryCachePlugin, RedisCachePlugin</li>
  *   <li>视图插件：ThymeleafPlugin, FreemarkerPlugin</li>
  * </ul>

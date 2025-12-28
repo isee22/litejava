@@ -59,16 +59,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class I18nPlugin extends MiddlewarePlugin {
     
-    /** 默认实例（单例访问） */
-    public static I18nPlugin instance;
-    
     private final Map<String, Map<String, String>> messages = new ConcurrentHashMap<>();
     public String defaultLocale = "en";
     public String queryParam = "lang";
     public String cookieName = "lang";
     
     public I18nPlugin() {
-        instance = this;
     }
     
     @Override

@@ -4,6 +4,7 @@ import litejava.App;
 import litejava.plugin.ConfPlugin;
 import litejava.plugin.StaticFilePlugin;
 import litejava.plugins.database.JdbcPlugin;
+import litejava.plugins.dataSource.HikariPlugin;
 import litejava.plugins.log.Slf4jLogPlugin;
 import litejava.plugins.server.NettyServerPlugin;
 import litejava.plugins.view.ThymeleafPlugin;
@@ -21,7 +22,9 @@ public class NettyServer {
         app.use(new ConfPlugin("benchmark.properties"));
         app.use(new GoJsonPlugin());
         
-        JdbcPlugin jdbc = new JdbcPlugin("db");
+        HikariPlugin hikari = new HikariPlugin("db");
+        app.use(hikari);
+        JdbcPlugin jdbc = new JdbcPlugin(hikari);
         app.use(jdbc);
         app.use(new NettyServerPlugin());
         app.use(new ThymeleafPlugin("templates/"));

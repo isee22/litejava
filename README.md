@@ -226,8 +226,10 @@ public class BookApp {
         App app = LiteJava.create();
         
         // 数据库
-        app.use(new JdbcPlugin("db"));
-        JdbcPlugin jdbc = app.getPlugin(JdbcPlugin.class);
+        HikariPlugin hikari = new HikariPlugin();
+        app.use(hikari);
+        JdbcPlugin jdbc = new JdbcPlugin(hikari);
+        app.use(jdbc);
         
         // 图书 CRUD
         app.group("/api/books", books -> {
@@ -304,7 +306,7 @@ public class UserService {
             });
         });
         
-        app.run(8080);
+        app.run();
     }
 }
 ```
@@ -332,6 +334,8 @@ public class UserService {
 | **服务器** | `NettyServerPlugin` | Netty 高性能服务器 |
 | | `JettyServerPlugin` | Jetty 服务器 |
 | | `UndertowServerPlugin` | Undertow 服务器 |
+| **数据源** | `HikariPlugin` | HikariCP 连接池（推荐） |
+| | `DruidPlugin` | Druid 连接池 |
 | **数据库** | `JdbcPlugin` | JDBC 数据库访问 |
 | | `JpaPlugin` | JPA ORM |
 | | `MyBatisPlugin` | MyBatis 集成 |

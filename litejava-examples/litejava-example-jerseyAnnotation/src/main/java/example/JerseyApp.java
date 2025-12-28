@@ -1,9 +1,13 @@
 package example;
 
+import example.resource.UserResource;
 import litejava.App;
 import litejava.plugin.HttpServerPlugin;
 import litejava.plugins.annotation.JerseyRuntimePlugin;
+import litejava.plugins.json.JacksonPlugin;
+import org.glassfish.jersey.jackson.JacksonFeature;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -29,19 +33,21 @@ public class JerseyApp {
     
     public static void main(String[] args) {
         App app = new App();
+        app.use(new JacksonPlugin());
         app.use(new HttpServerPlugin());
         
-        // Jersey 完整运行时
+        // Jersey 完整运行时 - 手动注册 Resource 类（shaded jar 中包扫描可能失效）
         JerseyRuntimePlugin jersey = new JerseyRuntimePlugin();
         jersey.basePath = "/api";
-        jersey.packages = "example.resource";
+        jersey.register(UserResource.class);
+        jersey.register(JacksonFeature.class);  // 注册 Jackson JSON 支持
         app.use(jersey);
         
-        app.get("/", ctx -> ctx.json(Map.of(
-            "message", "LiteJava Jersey Runtime Example",
-            "endpoints", "/api/users"
-        )));
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("message", "LiteJava Jersey Runtime Example");
+        info.put("endpoints", "/api/users");
+        app.get("/", ctx -> ctx.json(info));
         
-        app.run(8080);
+        app.run();
     }
 }

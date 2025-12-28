@@ -9,11 +9,7 @@ import litejava.Plugin;
  */
 public class ViewPlugin extends Plugin {
     
-    /** 默认实例（单例访问） */
-    public static ViewPlugin instance;
-    
     public ViewPlugin() {
-        instance = this;
     }
     
     public String render(String template, Map<String, Object> data) {

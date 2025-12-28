@@ -1,0 +1,33 @@
+# SpringBootConfApp 专用配置
+# 插件由代码显式加载，配置文件只提供参数
+
+# 服务器配置
+server:
+  port: 8080
+
+# 数据源配置
+datasource:
+  url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;INIT=RUNSCRIPT FROM 'classpath:schema.sql'
+  username: sa
+  password: ""
+  driver: org.h2.Driver
+
+# MyBatis 配置
+mybatis:
+  mapperPackage: example.mapper
+
+# Guice DI 配置
+guice:
+  packages: example.service
+
+# 定时任务（注解方式扫描）
+scheduler:
+  packages: example.controller
+
+# Spring MVC 配置
+springmvc:
+  packages: example.controller
+
+# Thymeleaf 配置
+thymeleaf:
+  templateDir: templates/

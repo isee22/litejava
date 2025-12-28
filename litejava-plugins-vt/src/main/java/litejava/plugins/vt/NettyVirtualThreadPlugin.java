@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.*;
 import litejava.Context;
 import litejava.exception.LiteJavaException;
 import litejava.plugin.ServerPlugin;
+import litejava.plugins.ObjectPool;
 
 import java.util.Map;
 import java.util.concurrent.ThreadFactory;
@@ -24,6 +25,18 @@ public class NettyVirtualThreadPlugin extends ServerPlugin {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel channel;
+    
+    public NettyVirtualThreadPlugin() {
+        super();
+    }
+    
+    public NettyVirtualThreadPlugin(int port) {
+        super(port);
+    }
+    
+    public NettyVirtualThreadPlugin(int port, String host) {
+        super(port, host);
+    }
     
     private final ObjectPool<Context> contextPool = new ObjectPool<>(
         Context::new,
@@ -69,8 +82,8 @@ public class NettyVirtualThreadPlugin extends ServerPlugin {
                     }
                 });
             
-            channel = b.bind(host, app.port).sync().channel();
-            app.log.info("Netty (Virtual Thread EventLoop) started on " + host + ":" + app.port);
+            channel = b.bind(host, port).sync().channel();
+            app.log.info("Netty (Virtual Thread EventLoop) started on " + host + ":" + port);
         } catch (Exception e) {
             throw new LiteJavaException("Failed to start Netty server", e);
         }

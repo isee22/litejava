@@ -2,8 +2,10 @@ package com.example;
 
 import com.example.controller.HomeController;
 import com.example.controller.UserController;
+import com.example.service.UserService;
 import litejava.plugins.LiteJava;
 import litejava.plugins.database.MyBatisPlugin;
+import litejava.plugins.dataSource.HikariPlugin;
 import litejava.plugins.view.ThymeleafPlugin;
 
 /**
@@ -22,14 +24,20 @@ public class App {
         litejava.App app = LiteJava.create();
         
         // 数据库 (MyBatis)
-        app.use(new MyBatisPlugin());
+        HikariPlugin hikari = new HikariPlugin();
+        app.use(hikari);
+        MyBatisPlugin mybatis = new MyBatisPlugin(hikari);
+        app.use(mybatis);
         
         // 模板引擎 (Thymeleaf)
         app.use(new ThymeleafPlugin());
         
+        // 服务
+        UserService userService = new UserService(mybatis);
+        
         // 路由
         app.register(new HomeController().routes());
-        app.register(new UserController().routes());
+        app.register(new UserController(userService).routes());
         
         // 启动
         app.run();

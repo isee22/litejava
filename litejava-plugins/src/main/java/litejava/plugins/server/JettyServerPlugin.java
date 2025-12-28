@@ -25,6 +25,18 @@ public class JettyServerPlugin extends ServerPlugin {
     public int maxThreads = 200;
     public int idleTimeout = 60000;
     
+    public JettyServerPlugin() {
+        super();
+    }
+    
+    public JettyServerPlugin(int port) {
+        super(port);
+    }
+    
+    public JettyServerPlugin(int port, String host) {
+        super(port, host);
+    }
+    
     // 需要读取 body 的方法
     private static final String[] BODY_METHODS = {"POST", "PUT", "PATCH"};
     
@@ -64,13 +76,13 @@ public class JettyServerPlugin extends ServerPlugin {
             org.eclipse.jetty.server.ServerConnector connector = 
                 new org.eclipse.jetty.server.ServerConnector(server);
             connector.setHost(host);
-            connector.setPort(app.port);
+            connector.setPort(port);
             server.addConnector(connector);
             
             server.setHandler(new JettyHandler());
             server.start();
             
-            app.log.info("Jetty server started on " + host + ":" + app.port);
+            app.log.info("Jetty server started on " + host + ":" + port);
         } catch (Exception e) {
             throw new LiteJavaException("Failed to start Jetty server", e);
         }

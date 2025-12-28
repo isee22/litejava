@@ -3,6 +3,7 @@ package example;
 import litejava.App;
 import litejava.plugin.HttpServerPlugin;
 import litejava.plugins.annotation.JaxRsAnnotationPlugin;
+import litejava.plugins.json.JacksonPlugin;
 
 import java.util.Map;
 
@@ -30,6 +31,7 @@ public class JaxRsApp {
     public static void main(String[] args) {
         App app = new App();
         app.use(new HttpServerPlugin());
+        app.use(new JacksonPlugin());
         
         // 零配置！自动扫描 classpath 中的 @Path 注解类
         app.use(new JaxRsAnnotationPlugin());
@@ -39,6 +41,6 @@ public class JaxRsApp {
             "endpoints", "/api/users"
         )));
         
-        app.run(8080);
+        app.run();
     }
 }

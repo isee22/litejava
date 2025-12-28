@@ -3,6 +3,7 @@ package litejava.plugins.security;
 import litejava.Context;
 import litejava.MiddlewarePlugin;
 import litejava.Next;
+import litejava.util.Maps;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,7 +68,7 @@ public class RateLimitPlugin extends MiddlewarePlugin {
             if (record[0] > maxRequests) {
                 ctx.status(429)
                    .header("Retry-After", String.valueOf(windowMs / 1000))
-                   .json(Map.of("error", "Too Many Requests"));
+                   .json(Maps.of("error", "Too Many Requests"));
                 return;
             }
         }

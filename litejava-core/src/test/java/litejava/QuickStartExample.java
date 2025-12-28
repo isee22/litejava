@@ -240,7 +240,7 @@ public class QuickStartExample {
      */
     public static void fullAppExample() {
         App app = new App();
-        app.port(8080).devMode(true).env("dev");
+        app.devMode(true).env("dev");
         
         // 中间件
         app.use(new RequestLogMiddleware());

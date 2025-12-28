@@ -3,13 +3,16 @@ package example;
 import example.controller.AuthController;
 import example.controller.BookController;
 import example.controller.FileController;
+import example.infra.Db;
 import litejava.App;
 import litejava.plugin.StaticFilePlugin;
 import litejava.plugins.LiteJava;
 import litejava.plugins.database.JdbcPlugin;
+import litejava.plugins.dataSource.HikariPlugin;
 import litejava.plugins.log.RequestLogPlugin;
 import litejava.plugins.security.AuthPlugin;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -30,7 +33,13 @@ public class BookApp {
         App app = LiteJava.create();
         
         // 数据库
-        app.use(new JdbcPlugin());
+        HikariPlugin hikari = new HikariPlugin();
+        app.use(hikari);
+        JdbcPlugin jdbc = new JdbcPlugin(hikari);
+        app.use(jdbc);
+        
+        // 初始化 Db 工具类
+        Db.init(jdbc);
         
         // 静态文件
         app.use(new StaticFilePlugin("/static", "static"));
@@ -41,7 +50,12 @@ public class BookApp {
         // Token 认证（数据库存储）
         app.use(new AuthPlugin(token -> {
             String username = Dao.session.findUsernameByToken(token);
-            return username != null ? Map.of("username", username) : null;
+            if (username != null) {
+                Map<String, Object> user = new LinkedHashMap<>();
+                user.put("username", username);
+                return user;
+            }
+            return null;
         }).whitelist("/", "/api/auth/login", "/api/auth/register")
           .whitelistPrefix("/static", "/api/books"));
         

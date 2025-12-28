@@ -114,6 +114,14 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- DruidPlugin (Alibaba Druid) -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.20</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- MyBatisPlugin -->
         <dependency>
             <groupId>org.mybatis</groupId>
@@ -295,6 +303,62 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
             <version>5.3.31</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ConsulPlugin (Service Discovery) -->
+        <dependency>
+            <groupId>com.orbitz.consul</groupId>
+            <artifactId>consul-client</artifactId>
+            <version>1.5.3</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- NacosConfigPlugin (Config Center) -->
+        <dependency>
+            <groupId>com.alibaba.nacos</groupId>
+            <artifactId>nacos-client</artifactId>
+            <version>2.3.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- KafkaPlugin (Message Queue) -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+            <version>3.6.1</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- RabbitMQPlugin (Message Queue) -->
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>5.20.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ElasticsearchPlugin (Full-text Search) -->
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>8.11.3</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- S3Plugin (AWS S3 / MinIO) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.21.46</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- OssPlugin (Aliyun OSS) -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.4</version>
             <optional>true</optional>
         </dependency>
 

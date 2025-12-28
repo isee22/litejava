@@ -22,6 +22,9 @@ import java.util.Map;
  * 
  * <h2>使用示例</h2>
  * <pre>{@code
+ * // 初始化（在 App 启动时）
+ * Db.init(app.getPlugin(JdbcPlugin.class));
+ * 
  * // 查询
  * List<Book> books = Db.find(Book.class);
  * Book book = Db.first(Book.class, 1);
@@ -56,6 +59,15 @@ import java.util.Map;
  * }</pre>
  */
 public class Db {
+    
+    private static JdbcPlugin jdbcPlugin;
+    
+    /**
+     * 初始化 Db 工具类
+     */
+    public static void init(JdbcPlugin plugin) {
+        jdbcPlugin = plugin;
+    }
     
     // ==================== 查询 ====================
     
@@ -156,17 +168,17 @@ public class Db {
     // ==================== 事务 ====================
     
     public static <T> T tx(TransactionCallback<T> action) {
-        return JdbcPlugin.instance.txTemplate.execute(action);
+        return jdbcPlugin.txTemplate.execute(action);
     }
     
     // ==================== 底层访问 ====================
     
     public static JdbcTemplate jdbc() {
-        return JdbcPlugin.instance.jdbcTemplate;
+        return jdbcPlugin.jdbcTemplate;
     }
     
     public static TransactionTemplate tx() {
-        return JdbcPlugin.instance.txTemplate;
+        return jdbcPlugin.txTemplate;
     }
     
     // ==================== 内部方法 ====================
