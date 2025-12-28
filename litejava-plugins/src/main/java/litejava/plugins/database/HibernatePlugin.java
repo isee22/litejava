@@ -154,6 +154,44 @@ public class HibernatePlugin extends Plugin {
         return sessionFactory.createEntityManager();
     }
     
+    /**
+     * 执行查询操作（自动管理 EntityManager 生命周期）
+     */
+    public <T> T query(java.util.function.Function<EntityManager, T> action) {
+        EntityManager em = sessionFactory.createEntityManager();
+        try {
+            return action.apply(em);
+        } finally {
+            em.close();
+        }
+    }
+    
+    /**
+     * 执行事务操作（自动管理 EntityManager 和事务）
+     */
+    public <T> T tx(java.util.function.Function<EntityManager, T> action) {
+        EntityManager em = sessionFactory.createEntityManager();
+        javax.persistence.EntityTransaction tx = em.getTransaction();
+        try {
+            tx.begin();
+            T result = action.apply(em);
+            tx.commit();
+            return result;
+        } catch (Exception e) {
+            if (tx.isActive()) tx.rollback();
+            throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
+        } finally {
+            em.close();
+        }
+    }
+    
+    /**
+     * 执行事务操作（无返回值）
+     */
+    public void txVoid(java.util.function.Consumer<EntityManager> action) {
+        tx(em -> { action.accept(em); return null; });
+    }
+    
     private void scanEntities(String packageName, Configuration cfg) {
         try {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();

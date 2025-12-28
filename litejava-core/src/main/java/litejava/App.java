@@ -182,6 +182,9 @@ public class App {
     /** 启动前回调列表 */
     private final List<Runnable> onReadyCallbacks = new ArrayList<>();
     
+    /** 启动后回调列表 */
+    private final List<Runnable> onStartedCallbacks = new ArrayList<>();
+    
     // ==================== 构造函数 ====================
     
     public App() {
@@ -440,6 +443,21 @@ public class App {
         return this;
     }
     
+    /**
+     * 注册启动后回调（在服务器启动后执行）
+     * 
+     * <pre>{@code
+     * app.onStarted(() -> {
+     *     System.out.println("Server is ready to accept requests!");
+     *     healthCheck.verify();
+     * });
+     * }</pre>
+     */
+    public App onStarted(Runnable callback) {
+        this.onStartedCallbacks.add(callback);
+        return this;
+    }
+    
     // ==================== 生命周期 ====================
     
     /**
@@ -499,6 +517,11 @@ public class App {
         }
         
         server.start();
+        
+        // 执行 onStarted 回调（在服务器启动后）
+        for (Runnable callback : onStartedCallbacks) {
+            callback.run();
+        }
         
         String host = conf.getString("server", "host", "0.0.0.0");
         String displayHost = "0.0.0.0".equals(host) ? "localhost" : host;

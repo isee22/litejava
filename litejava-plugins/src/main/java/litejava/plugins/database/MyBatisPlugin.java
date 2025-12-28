@@ -90,10 +90,15 @@ public class MyBatisPlugin extends Plugin {
             new JdbcTransactionFactory(), dataSource));
         configuration.setMapUnderscoreToCamelCase(true);
         
-        // 从配置文件注册 mapper 包
+        // 从配置文件注册 mapper 包（支持逗号分隔多个包）
         String mapperPackage = app.conf.getString("mybatis", "mapperPackage", null);
         if (mapperPackage != null) {
-            configuration.addMappers(mapperPackage);
+            for (String pkg : mapperPackage.split(",")) {
+                String trimmed = pkg.trim();
+                if (!trimmed.isEmpty()) {
+                    configuration.addMappers(trimmed);
+                }
+            }
         }
         
         // 从构造参数注册 mapper 类
