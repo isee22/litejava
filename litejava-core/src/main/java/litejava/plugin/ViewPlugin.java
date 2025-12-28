@@ -9,6 +9,12 @@ import litejava.Plugin;
  */
 public class ViewPlugin extends Plugin {
     
+    /** 单例插件，同类型自动替换 */
+    @Override
+    public boolean singleton() {
+        return true;
+    }
+    
     public ViewPlugin() {
     }
     

@@ -158,6 +158,12 @@ import java.util.*;
  */
 public class FilePlugin extends Plugin {
     
+    /** 单例插件，同类型自动替换 */
+    @Override
+    public boolean singleton() {
+        return true;
+    }
+    
     // ==================== 配置项 ====================
     
     /** 单文件最大大小（字节），默认 10MB */

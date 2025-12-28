@@ -62,6 +62,12 @@ import litejava.Plugin;
  */
 public class LogPlugin extends Plugin {
     
+    /** 单例插件，同类型自动替换 */
+    @Override
+    public boolean singleton() {
+        return true;
+    }
+    
     // ==================== 日志级别常量 ====================
     
     public static final int DEBUG = 0;

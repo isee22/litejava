@@ -87,6 +87,39 @@ public class Plugin {
     public App app;
     
     /**
+     * 是否单例插件（可选重写）
+     * 
+     * <p>单例插件同类型只能存在一个，后注册的自动替换先注册的。
+     * 默认 false，允许多实例共存。
+     * 
+     * <h3>使用场景</h3>
+     * <ul>
+     *   <li>ResultPlugin - 响应格式只能有一种</li>
+     *   <li>JsonPlugin - JSON 序列化器只能有一个</li>
+     *   <li>ServerPlugin - 服务器只能有一个</li>
+     * </ul>
+     * 
+     * <h3>示例</h3>
+     * <pre>{@code
+     * public class ResultPlugin extends Plugin {
+     *     @Override
+     *     public boolean singleton() {
+     *         return true;
+     *     }
+     * }
+     * 
+     * // 用户替换
+     * app.use(new ResultPlugin());       // 注册默认
+     * app.use(new SimpleResultPlugin()); // 自动替换上面的
+     * }</pre>
+     * 
+     * @return true 表示单例，同类型自动替换
+     */
+    public boolean singleton() {
+        return false;
+    }
+    
+    /**
      * 配置插件（子类重写）
      * 
      * <p>在此方法中：

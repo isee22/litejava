@@ -66,6 +66,12 @@ import litejava.Plugin;
  */
 public class ServerPlugin extends Plugin {
     
+    /** 单例插件，同类型自动替换 */
+    @Override
+    public boolean singleton() {
+        return true;
+    }
+    
     // ==================== 通用服务器配置 ====================
     
     /** 服务器端口 */

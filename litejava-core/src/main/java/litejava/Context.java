@@ -562,20 +562,21 @@ public class Context {
     /**
      * 成功响应（统一格式）
      * 
+     * <p>响应格式由 {@link litejava.plugin.ResultPlugin} 决定：
      * <pre>{@code
      * ctx.ok(data);
-     * // 输出: {"code": 0, "data": data, "msg": "success"}
+     * // 默认输出: {"code": 0, "data": data, "msg": "success"}
+     * 
+     * // 使用 SimpleResultPlugin 时直接输出 data
      * }</pre>
      * 
      * @param data 响应数据
      * @return this
+     * @see litejava.plugin.ResultPlugin
+     * @see litejava.plugin.SimpleResultPlugin
      */
     public Context ok(Object data) {
-        Map<String, Object> resp = new LinkedHashMap<>();
-        resp.put("code", 0);
-        resp.put("data", data);
-        resp.put("msg", "success");
-        return json(resp);
+        return json(app.result.wrap(data));
     }
     
     /**
@@ -591,14 +592,14 @@ public class Context {
      * 
      * <pre>{@code
      * ctx.fail("参数错误");
-     * // 输出: {"code": -1, "data": null, "msg": "参数错误"}
+     * // 默认输出: {"code": -1, "data": null, "msg": "参数错误"}
      * }</pre>
      * 
      * @param msg 错误消息
      * @return this
      */
     public Context fail(String msg) {
-        return fail(-1, msg);
+        return json(app.result.wrapError(msg));
     }
     
     /**
@@ -608,11 +609,7 @@ public class Context {
      * @return this
      */
     public Context fail(int code, String msg) {
-        Map<String, Object> resp = new LinkedHashMap<>();
-        resp.put("code", code);
-        resp.put("data", null);
-        resp.put("msg", msg);
-        return json(resp);
+        return json(app.result.wrapError(code, msg));
     }
     
     /**

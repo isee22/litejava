@@ -202,6 +202,9 @@ public class App {
     /** 缓存插件 */
     public CachePlugin cache;
     
+    /** 响应格式插件，默认标准三件套 */
+    public ResultPlugin result = new ResultPlugin();
+    
     // ==================== 内部状态 ====================
     
     /** 优雅停机标志 */
@@ -286,12 +289,51 @@ public class App {
     public App use(String name, Plugin plugin) {
         plugin.app = this;
         
-        // 检查是否已有同类型插件（非命名注册时警告）
-        if (name.equals(plugin.getClass().getSimpleName())) {
-            Plugin existing = getPlugin(plugin.getClass());
-            if (existing != null && existing != plugin) {
-                log.warn(plugin.getClass().getSimpleName() + ": Multiple instances detected. " +
-                        "Use app.use(name, plugin) for multi-instance scenarios.");
+        // 单例插件：移除同类型（包括子类）的旧插件
+        if (plugin.singleton()) {
+            Class<?> pluginClass = plugin.getClass();
+            // 找到最顶层的单例父类
+            while (pluginClass.getSuperclass() != null && 
+                   pluginClass.getSuperclass() != Plugin.class &&
+                   pluginClass.getSuperclass() != MiddlewarePlugin.class) {
+                try {
+                    Plugin parent = (Plugin) pluginClass.getSuperclass().newInstance();
+                    if (parent.singleton()) {
+                        pluginClass = pluginClass.getSuperclass();
+                    } else {
+                        break;
+                    }
+                } catch (Exception e) {
+                    break;
+                }
+            }
+            
+            final Class<?> baseClass = pluginClass;
+            Iterator<Map.Entry<String, Plugin>> it = plugins.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<String, Plugin> entry = it.next();
+                Plugin existing = entry.getValue();
+                if (baseClass.isInstance(existing) && existing != plugin) {
+                    log.warn("Replacing " + existing.getClass().getSimpleName() + " with " + plugin.getClass().getSimpleName());
+                    try {
+                        existing.uninstall();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    it.remove();
+                    if (existing instanceof MiddlewarePlugin) {
+                        middlewares.remove(existing);
+                    }
+                }
+            }
+        } else {
+            // 非单例：检查是否已有同类型插件（非命名注册时警告）
+            if (name.equals(plugin.getClass().getSimpleName())) {
+                Plugin existing = getPlugin(plugin.getClass());
+                if (existing != null && existing != plugin) {
+                    log.warn(plugin.getClass().getSimpleName() + ": Multiple instances detected. " +
+                            "Use app.use(name, plugin) for multi-instance scenarios.");
+                }
             }
         }
         
@@ -311,6 +353,8 @@ public class App {
             this.file = (FilePlugin) plugin;
         } else if (plugin instanceof CachePlugin && this.cache == null) {
             this.cache = (CachePlugin) plugin;
+        } else if (plugin instanceof ResultPlugin) {
+            this.result = (ResultPlugin) plugin;
         } else if (plugin instanceof ServerPlugin && this.server == null) {
             this.server = (ServerPlugin) plugin;
         } else if (plugin instanceof RouterPlugin && this.router.getClass() == RouterPlugin.class) {

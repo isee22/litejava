@@ -67,6 +67,12 @@ import litejava.Plugin;
  */
 public class ConfPlugin extends Plugin {
     
+    /** 单例插件，同类型自动替换 */
+    @Override
+    public boolean singleton() {
+        return true;
+    }
+    
     /** 配置文件路径 */
     public String file = "application.properties";
     

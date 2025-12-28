@@ -49,6 +49,12 @@ import litejava.Plugin;
  */
 public class JsonPlugin extends Plugin {
     
+    /** 单例插件，同类型自动替换 */
+    @Override
+    public boolean singleton() {
+        return true;
+    }
+    
     /**
      * 将对象序列化为 JSON 字符串
      * @param obj 要序列化的对象
