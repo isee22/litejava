@@ -154,9 +154,10 @@ public class HttpServerPlugin extends ServerPlugin {
         
         try {
             parseRequest(exchange, ctx);
-            app.handle(ctx);
+            app.handler.handle(ctx);
         } catch (Exception e) {
-            app.handleError(ctx, e);
+            // 兜底处理（正常情况由 ExceptionPlugin 捕获）
+            app.exception.handleError(ctx, e);
         } finally {
             sendResponse(exchange, ctx);
             releaseContext(ctx);

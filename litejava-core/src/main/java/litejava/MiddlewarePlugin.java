@@ -82,12 +82,14 @@ package litejava;
  * 
  * <h2>注册中间件（按注册顺序执行，与 Gin 一致）</h2>
  * <pre>{@code
- * // 推荐顺序：
- * app.use(new ExceptionPlugin());     // 1. 异常恢复（最外层）
- * app.use(new RequestLogPlugin());   // 2. 请求日志
- * app.use(new CorsPlugin());         // 3. 跨域处理
- * app.use(new AuthPlugin(...));      // 4. 认证
+ * // ExceptionPlugin 内置，无需手动添加
+ * app.use(new RequestLogPlugin());   // 1. 请求日志
+ * app.use(new CorsPlugin());         // 2. 跨域处理
+ * app.use(new AuthPlugin(...));      // 3. 认证
  * // ... 其他中间件
+ * 
+ * // 自定义异常处理
+ * app.exception.handler = (ctx, e) -> { ... };
  * 
  * // 静态文件建议用路由方式，而非中间件
  * app.get("/static/*filepath", staticHandler);

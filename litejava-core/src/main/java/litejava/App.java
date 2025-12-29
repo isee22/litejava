@@ -104,9 +104,13 @@ import java.util.function.*;
  * <h2>中间件（洋葱模型）</h2>
  * <pre>{@code
  * // 全局中间件
- * app.use(new ExceptionPlugin());    // 异常恢复
  * app.use(new RequestLogPlugin());  // 请求日志
  * app.use(new CorsPlugin());        // 跨域处理
+ * 
+ * // 自定义异常处理（内置 ExceptionPlugin 默认处理）
+ * app.exception.handler = (ctx, e) -> {
+ *     ctx.status(500).json(Maps.of("error", e.getMessage()));
+ * };
  * 
  * // 认证中间件（推荐使用内置 AuthPlugin）
  * app.use(new AuthPlugin(token -> jwtPlugin.verify(token))
@@ -114,38 +118,37 @@ import java.util.function.*;
  *     .whitelistPrefix("/static"));
  * }</pre>
  * 
- * <h2>继承扩展 App</h2>
- * <p>如果默认行为不满足需求，可以继承 App 重写任意方法：
+ * <h2>自定义扩展</h2>
+ * <p>通过替换内置插件实现自定义行为：
  * <pre>{@code
- * public class MyApp extends App {
- *     
- *     // 自定义错误处理
+ * // 自定义异常处理
+ * app.exception.handler = (ctx, e) -> {
+ *     ctx.status(500).json(Maps.of("error", e.getMessage()));
+ * };
+ * 
+ * // 或继承 ExceptionPlugin
+ * public class MyExceptionPlugin extends ExceptionPlugin {
  *     @Override
  *     public void handleError(Context ctx, Exception e) {
  *         log.error("Request failed: " + ctx.path, e);
- *         ctx.status(500).json(Map.of(
- *             "code", -1,
- *             "msg", e.getMessage()
- *         ));
+ *         ctx.status(500).json(Maps.of("code", -1, "msg", e.getMessage()));
  *     }
- *     
- *     // 自定义请求处理流程
+ * }
+ * app.use(new MyExceptionPlugin());
+ * 
+ * // 自定义请求处理流程
+ * public class MyHandlerPlugin extends HandlerPlugin {
  *     @Override
  *     public void handle(Context ctx) throws Exception {
  *         long start = System.currentTimeMillis();
  *         try {
  *             super.handle(ctx);
  *         } finally {
- *             log.info(ctx.method + " " + ctx.path + " " + (System.currentTimeMillis() - start) + "ms");
+ *             System.out.println(ctx.method + " " + ctx.path + " " + (System.currentTimeMillis() - start) + "ms");
  *         }
  *     }
  * }
- * 
- * // 使用自定义 App
- * MyApp app = new MyApp();
- * app.use(new HttpServerPlugin());
- * app.get("/", ctx -> ctx.text("Hello"));
- * app.run();
+ * app.use(new MyHandlerPlugin());
  * }</pre>
  * 
  * @author LiteJava Team
@@ -176,8 +179,11 @@ public class App {
     /** 已注册的插件 Map，key 为插件名称（默认类名） */
     public final Map<String, Plugin> plugins = new LinkedHashMap<>();
     
-    /** 自定义错误处理器 */
-    public BiConsumer<Context, Throwable> errorHandler;
+    /** 内置异常处理插件（单例，始终在中间件最前面） */
+    public ExceptionPlugin exception = new ExceptionPlugin();
+    
+    /** 内置请求处理插件 */
+    public HandlerPlugin handler = new HandlerPlugin();
     
     // ==================== 内置插件引用（快捷访问） ====================
     
@@ -209,9 +215,6 @@ public class App {
     
     /** 优雅停机标志 */
     private volatile boolean stopping = false;
-    
-    /** 插件列表（保持注册顺序） */
-    private final List<Plugin> pluginList = new ArrayList<>();
     
     /** 启动前回调列表 */
     private final List<Runnable> onReadyCallbacks = new ArrayList<>();
@@ -297,13 +300,14 @@ public class App {
                    pluginClass.getSuperclass() != Plugin.class &&
                    pluginClass.getSuperclass() != MiddlewarePlugin.class) {
                 try {
-                    Plugin parent = (Plugin) pluginClass.getSuperclass().newInstance();
+                    Plugin parent = (Plugin) pluginClass.getSuperclass().getDeclaredConstructor().newInstance();
                     if (parent.singleton()) {
                         pluginClass = pluginClass.getSuperclass();
                     } else {
                         break;
                     }
                 } catch (Exception e) {
+                    // 无法实例化父类，停止向上查找
                     break;
                 }
             }
@@ -318,7 +322,7 @@ public class App {
                     try {
                         existing.uninstall();
                     } catch (Exception e) {
-                        // ignore
+                        log.warn("Failed to uninstall plugin: " + existing.getClass().getSimpleName() + " - " + e.getMessage());
                     }
                     it.remove();
                     if (existing instanceof MiddlewarePlugin) {
@@ -340,25 +344,32 @@ public class App {
         plugin.config();
         plugins.put(name, plugin);
         
-        // 自动注册到对应字段（仅第一个）
-        if (plugin instanceof ConfPlugin && this.conf.getClass() == ConfPlugin.class) {
+        // 自动注册到对应字段
+        // 单例插件始终替换，非单例插件只在字段为 null 时设置
+        if (plugin instanceof ConfPlugin) {
             this.conf = (ConfPlugin) plugin;
-        } else if (plugin instanceof LogPlugin && this.log.getClass() == LogPlugin.class) {
+        } else if (plugin instanceof LogPlugin) {
             this.log = (LogPlugin) plugin;
-        } else if (plugin instanceof JsonPlugin && this.json == null) {
+        } else if (plugin instanceof JsonPlugin) {
             this.json = (JsonPlugin) plugin;
-        } else if (plugin instanceof ViewPlugin && this.view == null) {
+        } else if (plugin instanceof ViewPlugin) {
             this.view = (ViewPlugin) plugin;
-        } else if (plugin instanceof FilePlugin && this.file.getClass() == FilePlugin.class) {
+        } else if (plugin instanceof FilePlugin) {
             this.file = (FilePlugin) plugin;
-        } else if (plugin instanceof CachePlugin && this.cache == null) {
+        } else if (plugin instanceof CachePlugin) {
             this.cache = (CachePlugin) plugin;
         } else if (plugin instanceof ResultPlugin) {
             this.result = (ResultPlugin) plugin;
-        } else if (plugin instanceof ServerPlugin && this.server == null) {
+        } else if (plugin instanceof ServerPlugin) {
             this.server = (ServerPlugin) plugin;
-        } else if (plugin instanceof RouterPlugin && this.router.getClass() == RouterPlugin.class) {
+        } else if (plugin instanceof RouterPlugin) {
             this.router = (RouterPlugin) plugin;
+        } else if (plugin instanceof ExceptionPlugin) {
+            // 替换内置异常处理插件
+            this.exception = (ExceptionPlugin) plugin;
+        } else if (plugin instanceof HandlerPlugin) {
+            // 替换内置请求处理插件
+            this.handler = (HandlerPlugin) plugin;
         } else if (plugin instanceof MiddlewarePlugin) {
             middlewares.add((MiddlewarePlugin) plugin);
         }
@@ -382,9 +393,8 @@ public class App {
             try {
                 plugin.uninstall();
             } catch (Exception e) {
-                // ignore
+                log.warn("Failed to uninstall plugin: " + plugin.getClass().getSimpleName() + " - " + e.getMessage());
             }
-            pluginList.remove(plugin);
             
             // 从中间件列表移除
             if (plugin instanceof MiddlewarePlugin) {
@@ -442,20 +452,6 @@ public class App {
     }
     
     /**
-     * 注册异步 GET 路由（返回 CompletableFuture）
-     */
-    public Route getAsync(String path, AsyncHandler handler) {
-        return get(path, ctx -> handler.handle(ctx).join());
-    }
-    
-    /**
-     * 注册异步 POST 路由
-     */
-    public Route postAsync(String path, AsyncHandler handler) {
-        return post(path, ctx -> handler.handle(ctx).join());
-    }
-    
-    /**
      * 注册指定 HTTP 方法的路由
      */
     public Route route(String method, String path, Handler handler) {
@@ -494,21 +490,6 @@ public class App {
     }
     
     // ==================== 错误处理 ====================
-    
-    /**
-     * 设置全局错误处理器
-     * 
-     * <pre>{@code
-     * app.onError((ctx, e) -> {
-     *     log.error("Request failed", e);
-     *     ctx.status(500).json(Map.of("error", e.getMessage()));
-     * });
-     * }</pre>
-     */
-    public App onError(BiConsumer<Context, Throwable> handler) {
-        this.errorHandler = handler;
-        return this;
-    }
     
     /**
      * 注册启动前回调（在服务器启动前执行）
@@ -568,16 +549,6 @@ public class App {
             Context.setCharset(charset);
         }
         
-        for (Plugin plugin : pluginList) {
-            try {
-                plugin.app = this;
-                plugin.config();
-                plugins.put(plugin.getClass().getSimpleName(), plugin);
-            } catch (Exception e) {
-                throw new LiteJavaException("Failed to install plugin: " + plugin.getClass().getSimpleName(), e);
-            }
-        }
-        
         if (devMode) {
             router.printRoutes(s -> log.info(s));
         }
@@ -586,8 +557,19 @@ public class App {
             throw new LiteJavaException("No server plugin registered. Use app.use(serverPlugin) first.");
         }
         
+        // 确保内置 ExceptionPlugin 在中间件最前面
+        exception.app = this;
+        exception.config();
+        List<MiddlewarePlugin> finalMiddlewares = new ArrayList<>();
+        finalMiddlewares.add(exception);
+        finalMiddlewares.addAll(middlewares);
+        
         // 冻结中间件列表，避免运行时修改
-        middlewares = Collections.unmodifiableList(new ArrayList<>(middlewares));
+        middlewares = Collections.unmodifiableList(finalMiddlewares);
+        
+        // 初始化 HandlerPlugin
+        handler.app = this;
+        handler.config();
         
         // 执行 onReady 回调（在服务器启动前）
         for (Runnable callback : onReadyCallbacks) {
@@ -595,6 +577,15 @@ public class App {
         }
         
         server.start();
+        
+        // 调用所有插件的 onStart()
+        for (Plugin plugin : plugins.values()) {
+            try {
+                plugin.onStart();
+            } catch (Exception e) {
+                log.error("Plugin onStart failed: " + plugin.getClass().getSimpleName() + " - " + e.getMessage());
+            }
+        }
         
         // 执行 onStarted 回调（在服务器启动后）
         for (Runnable callback : onStartedCallbacks) {
@@ -615,9 +606,10 @@ public class App {
             server.stop();
         }
         // 逆序卸载插件
-        for (int i = pluginList.size() - 1; i >= 0; i--) {
+        List<Plugin> pluginValues = new ArrayList<>(plugins.values());
+        for (int i = pluginValues.size() - 1; i >= 0; i--) {
             try {
-                pluginList.get(i).uninstall();
+                pluginValues.get(i).uninstall();
             } catch (Exception e) {
                 System.err.println("Error uninstalling plugin: " + e.getMessage());
             }
@@ -644,92 +636,6 @@ public class App {
      */
     public boolean isStopping() {
         return stopping;
-    }
-    
-    // ==================== 请求处理 ====================
-    
-    /**
-     * 处理 HTTP 请求（由服务器插件调用）
-     * 
-     * <p>处理流程：
-     * <ol>
-     *   <li>执行中间件链（洋葱模型）</li>
-     *   <li>路由匹配</li>
-     *   <li>提取路径参数</li>
-     *   <li>执行 handler</li>
-     * </ol>
-     * 
-     * @param ctx 请求上下文
-     * @throws Exception 处理异常
-     */
-    public void handle(Context ctx) throws Exception {
-        // 路由匹配和执行作为最终 handler
-        Handler routeHandler = c -> {
-            RouterPlugin.RouteMatch match = router.match(c.method, c.path);
-            
-            if (match != null) {
-                // 直接赋值，避免 putAll
-                if (match.params != null && !match.params.isEmpty()) {
-                    c.params = match.params;
-                }
-                if (match.wildcardName != null) {
-                    c.wildcardPath = match.wildcardValue;
-                    c.params.put(match.wildcardName, match.wildcardValue);
-                }
-                match.handler.handle(c);
-            } else if (router.hasPath(c.path)) {
-                // 405 Method Not Allowed
-                throw new LiteJavaException("Method Not Allowed: " + c.method + " " + c.path, 405);
-            } else {
-                // 404 Not Found
-                throw new LiteJavaException("Not Found: " + c.path, 404);
-            }
-        };
-        
-        // 无中间件时直接执行路由，避免创建 MiddlewareChain
-        if (middlewares.isEmpty()) {
-            routeHandler.handle(ctx);
-        } else {
-            new MiddlewareChain(middlewares, routeHandler).execute(ctx);
-        }
-    }
-    
-    /**
-     * 处理请求异常
-     * 
-     * <p>开发模式下返回详细错误信息和堆栈，生产模式只返回通用错误。
-     * 
-     * @param ctx 请求上下文
-     * @param e 异常
-     */
-    public void handleError(Context ctx, Exception e) {
-        if (errorHandler != null) {
-            try {
-                errorHandler.accept(ctx, e);
-                return;
-            } catch (Exception handlerError) {
-                e = handlerError;
-            }
-        }
-        
-        int status = 500;
-        if (e instanceof LiteJavaException) {
-            status = ((LiteJavaException) e).statusCode;
-        }
-        
-        ctx.status(status);
-        
-        if (devMode) {
-            Map<String, Object> errorResponse = new LinkedHashMap<>();
-            errorResponse.put("error", e.getMessage());
-            errorResponse.put("type", e.getClass().getName());
-            StringWriter sw = new StringWriter();
-            e.printStackTrace(new PrintWriter(sw));
-            errorResponse.put("stack", sw.toString());
-            ctx.json(errorResponse);
-        } else {
-            ctx.json(Maps.of("error", "Internal Server Error"));
-        }
     }
     
     /**

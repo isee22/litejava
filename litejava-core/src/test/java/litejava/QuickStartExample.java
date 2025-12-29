@@ -191,21 +191,22 @@ public class QuickStartExample {
     public static void errorHandlingExample() {
         App app = new App();
         
-        // 全局错误处理
-        app.onError((ctx, e) -> {
-            System.err.println("Error: " + e.getMessage());
-            ctx.status(500).text("Internal Error");
-        });
-        
-        // 404 处理
-        app.noRoute(ctx -> {
-            ctx.status(404).text("Page Not Found: " + ctx.path);
-        });
-        
-        // 405 处理
-        app.noMethod(ctx -> {
-            ctx.status(405).text("Method Not Allowed: " + ctx.method);
-        });
+        // 统一错误处理（通过 statusCode 区分 404/405/500）
+        app.exception.handler = (ctx, e) -> {
+            int status = 500;
+            if (e instanceof litejava.exception.LiteJavaException) {
+                status = ((litejava.exception.LiteJavaException) e).statusCode;
+            }
+            
+            if (status == 404) {
+                ctx.status(404).text("Page Not Found: " + ctx.path);
+            } else if (status == 405) {
+                ctx.status(405).text("Method Not Allowed: " + ctx.method);
+            } else {
+                System.err.println("Error: " + e.getMessage());
+                ctx.status(500).text("Internal Error");
+            }
+        };
         
         System.out.println("✓ 错误处理示例完成");
     }
@@ -255,8 +256,12 @@ public class QuickStartExample {
             });
         });
         
-        // 错误处理
-        app.noRoute(ctx -> ctx.status(404).text("Not Found"));
+        // 错误处理（统一通过 exception.handler）
+        app.exception.handler = (ctx, e) -> {
+            int status = e instanceof litejava.exception.LiteJavaException 
+                ? ((litejava.exception.LiteJavaException) e).statusCode : 500;
+            ctx.status(status).text(status == 404 ? "Not Found" : "Error");
+        };
         
         // 启动前回调
         app.onReady(() -> System.out.println("  App ready!"));

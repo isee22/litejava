@@ -197,9 +197,9 @@ public class NettyServerPlugin extends ServerPlugin {
             
             try {
                 parseRequest(request, ctx);
-                app.handle(ctx);
+                app.handler.handle(ctx);
             } catch (Exception e) {
-                app.handleError(ctx, e);
+                app.exception.handleError(ctx, e);
             }
             
             sendResponse(nettyCtx, request, ctx);

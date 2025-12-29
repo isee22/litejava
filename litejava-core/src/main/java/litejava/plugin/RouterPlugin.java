@@ -43,13 +43,7 @@ public class RouterPlugin extends Plugin {
     private final RadixTree tree = new RadixTree();
     
     /** 路由列表（用于调试） */
-    private final List<Route> routes = new ArrayList<>();
-    
-    /** 404 处理器 */
-    public Handler noRouteHandler;
-    
-    /** 405 处理器 */
-    public Handler noMethodHandler;
+    public List<Route> routes = new ArrayList<>();
     
     public RouterPlugin() {}
     
@@ -108,18 +102,6 @@ public class RouterPlugin extends Plugin {
         root.routes.add(route);
         
         return route;
-    }
-    
-    // ==================== 特殊处理器 ====================
-    
-    public RouterPlugin noRoute(Handler handler) {
-        getRoot().noRouteHandler = handler;
-        return this;
-    }
-    
-    public RouterPlugin noMethod(Handler handler) {
-        getRoot().noMethodHandler = handler;
-        return this;
     }
     
     // ==================== 路由分组 ====================
@@ -195,6 +177,8 @@ public class RouterPlugin extends Plugin {
             newRoute.responses = r.responses;
             newRoute.requestBody = r.requestBody;
             newRoute.requestBodyDesc = r.requestBodyDesc;
+            newRoute.controllerClass = r.controllerClass;
+            newRoute.methodName = r.methodName;
             root.routes.add(newRoute);
         }
         return this;

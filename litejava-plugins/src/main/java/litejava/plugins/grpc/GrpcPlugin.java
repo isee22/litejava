@@ -118,7 +118,7 @@ public class GrpcPlugin extends Plugin {
             try {
                 serverSocket.close();
             } catch (IOException e) {
-                // ignore
+                System.err.println("[gRPC] Server close error: " + e.getMessage());
             }
         }
         if (executor != null) {
@@ -194,7 +194,7 @@ public class GrpcPlugin extends Plugin {
             try {
                 client.close();
             } catch (IOException e) {
-                // ignore
+                // Client socket close failure is non-critical
             }
         }
     }

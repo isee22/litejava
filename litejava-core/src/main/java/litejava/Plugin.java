@@ -19,6 +19,7 @@ package litejava;
  *   <li>创建插件实例</li>
  *   <li>调用 app.use(plugin) 注册</li>
  *   <li>框架调用 plugin.config() 初始化</li>
+ *   <li>服务器启动后调用 plugin.onStart()</li>
  *   <li>应用运行期间插件提供服务</li>
  *   <li>应用停止时调用 plugin.uninstall() 清理</li>
  * </ol>
@@ -142,4 +143,35 @@ public class Plugin {
      * </ul>
      */
     public void uninstall() {}
+    
+    /**
+     * 服务器启动后回调（可选重写）
+     * 
+     * <p>在服务器启动后执行，适合：
+     * <ul>
+     *   <li>启动后台任务（定时器、机器人等）</li>
+     *   <li>延迟初始化（不影响启动速度）</li>
+     *   <li>健康检查、预热缓存</li>
+     * </ul>
+     * 
+     * <h3>示例</h3>
+     * <pre>{@code
+     * public class BotPlugin extends Plugin {
+     *     @Override
+     *     public void onStart() {
+     *         // 服务器启动后才开始运行机器人
+     *         startBotThread();
+     *     }
+     * }
+     * 
+     * public class SwaggerPlugin extends Plugin {
+     *     @Override
+     *     public void onStart() {
+     *         // 延迟扫描，不影响启动速度
+     *         scanPackages();
+     *     }
+     * }
+     * }</pre>
+     */
+    public void onStart() {}
 }

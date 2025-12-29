@@ -99,7 +99,7 @@ public class ClassScanner {
                 }
             }
         } catch (Exception e) {
-            // ignore
+            System.err.println("Failed to scan package: " + packageName + " - " + e.getMessage());
         }
     }
     
@@ -130,13 +130,13 @@ public class ClassScanner {
                             Thread.currentThread().getContextClassLoader());
                         classes.add(clazz);
                     } catch (Throwable e) {
-                        // ignore
+                        // 类加载失败（依赖缺失等），跳过该类，不影响其他类扫描
                     }
                 }
             }
             jarFile.close();
         } catch (Exception e) {
-            // ignore
+            System.err.println("Failed to scan JAR: " + jarUrl + " - " + e.getMessage());
         }
     }
     
@@ -159,7 +159,7 @@ public class ClassScanner {
                         Thread.currentThread().getContextClassLoader());
                     classes.add(clazz);
                 } catch (Throwable e) {
-                    // ignore
+                    // 类加载失败（依赖缺失等），跳过该类，不影响其他类扫描
                 }
             }
         }

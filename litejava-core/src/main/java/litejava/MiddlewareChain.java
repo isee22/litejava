@@ -7,13 +7,13 @@ import java.util.*;
  * Each middleware can execute code before and after calling next().
  * Supports abort() to stop the chain.
  */
-class MiddlewareChain {
+public class MiddlewareChain {
     
     private final List<MiddlewarePlugin> middlewares;
     private final Handler finalHandler;
     private final int size;
     
-    MiddlewareChain(List<MiddlewarePlugin> middlewares, Handler finalHandler) {
+    public MiddlewareChain(List<MiddlewarePlugin> middlewares, Handler finalHandler) {
         // 直接引用，不复制
         this.middlewares = middlewares;
         this.finalHandler = finalHandler;
@@ -23,7 +23,7 @@ class MiddlewareChain {
     /**
      * Execute the middleware chain with the given context.
      */
-    void execute(Context ctx) throws Exception {
+    public void execute(Context ctx) throws Exception {
         executeAt(ctx, 0);
     }
     

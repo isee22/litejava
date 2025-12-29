@@ -128,7 +128,7 @@ public class SchedulePlugin extends Plugin {
         try {
             if (scheduler != null) scheduler.shutdown(true);
         } catch (SchedulerException e) {
-            // ignore
+            app.log.warn("Scheduler shutdown error: " + e.getMessage());
         }
     }
     
@@ -164,7 +164,7 @@ public class SchedulePlugin extends Plugin {
         try {
             scheduler.deleteJob(JobKey.jobKey(jobId));
         } catch (SchedulerException e) {
-            // ignore
+            app.log.warn("Failed to cancel job " + jobId + ": " + e.getMessage());
         }
     }
     

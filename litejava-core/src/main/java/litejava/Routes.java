@@ -8,13 +8,11 @@ import java.util.*;
  * <pre>{@code
  * public class AuthRoutes {
  *     public Routes routes() {
- *         return new Routes()
+ *         return new Routes(this)  // 传入 controller 实例用于注解扫描
  *             .post("/api/auth/login", this::login)
- *                 .summary("用户登录").tags("认证")
  *             .post("/api/auth/logout", this::logout)
- *                 .summary("用户登出").tags("认证")
  *             .get("/api/auth/me", this::me)
- *                 .summary("获取当前用户").tags("认证");
+ *             .end();
  *     }
  * }
  * 
@@ -26,34 +24,89 @@ public class Routes {
     
     public final List<Route> routes = new ArrayList<>();
     
+    /** Controller 实例（用于注解扫描） */
+    public Object controller;
+    
+    public Routes() {}
+    
+    /** 创建 Routes 并关联 Controller 实例（推荐，支持注解扫描） */
+    public Routes(Object controller) {
+        this.controller = controller;
+    }
+    
     public RouteBuilder get(String path, Handler handler) {
-        return add("GET", path, handler);
+        return add("GET", path, handler, null);
+    }
+    
+    /** GET 路由，指定方法名用于注解扫描 */
+    public RouteBuilder get(String path, Handler handler, String methodName) {
+        return add("GET", path, handler, methodName);
     }
     
     public RouteBuilder post(String path, Handler handler) {
-        return add("POST", path, handler);
+        return add("POST", path, handler, null);
+    }
+    
+    /** POST 路由，指定方法名用于注解扫描 */
+    public RouteBuilder post(String path, Handler handler, String methodName) {
+        return add("POST", path, handler, methodName);
     }
     
     public RouteBuilder put(String path, Handler handler) {
-        return add("PUT", path, handler);
+        return add("PUT", path, handler, null);
+    }
+    
+    /** PUT 路由，指定方法名用于注解扫描 */
+    public RouteBuilder put(String path, Handler handler, String methodName) {
+        return add("PUT", path, handler, methodName);
     }
     
     public RouteBuilder delete(String path, Handler handler) {
-        return add("DELETE", path, handler);
+        return add("DELETE", path, handler, null);
+    }
+    
+    /** DELETE 路由，指定方法名用于注解扫描 */
+    public RouteBuilder delete(String path, Handler handler, String methodName) {
+        return add("DELETE", path, handler, methodName);
     }
     
     public RouteBuilder patch(String path, Handler handler) {
-        return add("PATCH", path, handler);
+        return add("PATCH", path, handler, null);
+    }
+    
+    /** PATCH 路由，指定方法名用于注解扫描 */
+    public RouteBuilder patch(String path, Handler handler, String methodName) {
+        return add("PATCH", path, handler, methodName);
     }
     
     public RouteBuilder route(String method, String path, Handler handler) {
-        return add(method.toUpperCase(), path, handler);
+        return add(method.toUpperCase(), path, handler, null);
     }
     
-    private RouteBuilder add(String method, String path, Handler handler) {
+    RouteBuilder add(String method, String path, Handler handler, String methodName) {
         Route route = new Route(method, path, handler);
+        
+        // 保存 controller 信息用于注解扫描
+        if (controller != null) {
+            route.controllerClass = controller.getClass();
+            route.methodName = methodName != null ? methodName : extractMethodName(handler);
+        }
+        
         routes.add(route);
         return new RouteBuilder(this, route);
+    }
+    
+    /** 从 Handler lambda 提取方法名（通过 SerializedLambda） */
+    String extractMethodName(Handler handler) {
+        try {
+            java.lang.reflect.Method writeReplace = handler.getClass().getDeclaredMethod("writeReplace");
+            writeReplace.setAccessible(true);
+            java.lang.invoke.SerializedLambda lambda = (java.lang.invoke.SerializedLambda) writeReplace.invoke(handler);
+            return lambda.getImplMethodName();
+        } catch (Exception e) {
+            // 无法提取方法名，返回 null
+            return null;
+        }
     }
     
     /**
@@ -118,20 +171,40 @@ public class Routes {
             return parent.get(path, handler);
         }
         
+        public RouteBuilder get(String path, Handler handler, String methodName) {
+            return parent.get(path, handler, methodName);
+        }
+        
         public RouteBuilder post(String path, Handler handler) {
             return parent.post(path, handler);
+        }
+        
+        public RouteBuilder post(String path, Handler handler, String methodName) {
+            return parent.post(path, handler, methodName);
         }
         
         public RouteBuilder put(String path, Handler handler) {
             return parent.put(path, handler);
         }
         
+        public RouteBuilder put(String path, Handler handler, String methodName) {
+            return parent.put(path, handler, methodName);
+        }
+        
         public RouteBuilder delete(String path, Handler handler) {
             return parent.delete(path, handler);
         }
         
+        public RouteBuilder delete(String path, Handler handler, String methodName) {
+            return parent.delete(path, handler, methodName);
+        }
+        
         public RouteBuilder patch(String path, Handler handler) {
             return parent.patch(path, handler);
+        }
+        
+        public RouteBuilder patch(String path, Handler handler, String methodName) {
+            return parent.patch(path, handler, methodName);
         }
         
         public RouteBuilder route(String method, String path, Handler handler) {

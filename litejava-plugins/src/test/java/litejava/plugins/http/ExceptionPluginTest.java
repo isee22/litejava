@@ -1,6 +1,7 @@
 package litejava.plugins.http;
 
 import litejava.*;
+import litejava.plugin.ExceptionPlugin;
 import litejava.plugin.JsonPlugin;
 import litejava.plugin.LogPlugin;
 import org.junit.jupiter.api.*;
@@ -56,8 +57,16 @@ class ExceptionPluginTest {
         ctx.app.devMode = false;
         ctx.app.json = new SimpleJsonPlugin();
         
-        ExceptionPlugin plugin = new ExceptionPlugin();
-        plugin.showStack = true;
+        // 自定义 handler 显示堆栈
+        ExceptionPlugin plugin = new ExceptionPlugin((c, e) -> {
+            java.util.Map<String, Object> response = new java.util.LinkedHashMap<>();
+            response.put("error", e.getMessage());
+            response.put("type", e.getClass().getName());
+            java.io.StringWriter sw = new java.io.StringWriter();
+            e.printStackTrace(new java.io.PrintWriter(sw));
+            response.put("stack", sw.toString());
+            c.status(500).json(response);
+        });
         
         plugin.handle(ctx, () -> {
             throw new IllegalArgumentException("参数错误");

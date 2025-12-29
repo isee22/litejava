@@ -5,9 +5,9 @@ import litejava.plugin.ConfPlugin;
 import litejava.plugin.StaticFilePlugin;
 import litejava.plugins.database.JdbcPlugin;
 import litejava.plugins.dataSource.HikariPlugin;
+import litejava.plugins.json.GoJsonPlugin;
 import litejava.plugins.log.Slf4jLogPlugin;
 import litejava.plugins.view.ThymeleafPlugin;
-import litejava.plugins.vt.GoJsonPlugin;
 import litejava.plugins.vt.JettyVirtualThreadPlugin;
 
 import java.util.*;
@@ -26,7 +26,11 @@ public class JettyVTServer {
         app.use(hikari);
         JdbcPlugin jdbc = new JdbcPlugin(hikari);
         app.use(jdbc);
-        app.use(new JettyVirtualThreadPlugin());
+        
+        // 端口通过配置文件 server.port 设置，或 use 后覆盖
+        JettyVirtualThreadPlugin server = new JettyVirtualThreadPlugin();
+        app.use(server);
+        server.port = 8187;  // config() 已执行，直接覆盖
         app.use(new ThymeleafPlugin("templates/"));
         app.use(new StaticFilePlugin("/static", "static"));
         
@@ -61,9 +65,8 @@ public class JettyVTServer {
             ));
         });
         
-        int port = 8187;
-        app.run(port);
-        System.out.println("JettyVT started in " + (System.currentTimeMillis() - start) + "ms on port " + port);
+        app.run();
+        System.out.println("JettyVT started in " + (System.currentTimeMillis() - start) + "ms on port " + server.port);
     }
     
     private static int parseInt(String s, int def) { return s != null ? Integer.parseInt(s) : def; }

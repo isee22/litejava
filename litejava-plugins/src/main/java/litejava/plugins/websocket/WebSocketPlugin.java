@@ -113,7 +113,7 @@ public class WebSocketPlugin extends Plugin {
             if (pingScheduler != null) pingScheduler.shutdown();
             sessions.values().forEach(WsSession::close);
         } catch (IOException e) {
-            // ignore
+            app.log.warn("WebSocket server close error: " + e.getMessage());
         }
     }
 

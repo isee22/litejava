@@ -577,6 +577,47 @@ app.use(new JpaPlugin());
 | 优势 | 企业级支持、社区成熟 | 轻量快速、代码透明、插件灵活 |
 | 劣势 | 臃肿、魔法多、启动慢、注解侵入 | 社区较新 |
 
+### 关于"Spring 生态丰富"的真相
+
+很多人说 Spring 生态丰富，但仔细想想：
+
+**Spring 的"生态"本质是什么？**
+```
+Spring Boot + spring-boot-starter-xxx + 第三方库
+```
+
+starter 只是**桥接代码**，把第三方库包装成 Spring 风格。你用的还是那个第三方库，只是被 Spring "圈"进了它的体系。
+
+**LiteJava 直接用第三方库原生 API：**
+
+```java
+// Spring 方式：需要 spring-boot-starter-data-redis + 配置 + @Autowired
+@Autowired
+private RedisTemplate<String, Object> redisTemplate;
+redisTemplate.opsForValue().set("key", "value");
+
+// LiteJava 方式：直接用 Jedis，3 行代码
+Jedis jedis = new Jedis("localhost", 6379);
+jedis.set("key", "value");
+jedis.close();
+```
+
+```java
+// Spring 方式：需要 spring-boot-starter-amqp + 配置 + @RabbitListener
+@RabbitListener(queues = "myQueue")
+public void listen(String message) { ... }
+
+// LiteJava 方式：直接用 RabbitMQ 官方客户端
+ConnectionFactory factory = new ConnectionFactory();
+Connection conn = factory.newConnection();
+Channel channel = conn.createChannel();
+channel.basicConsume("myQueue", (tag, msg) -> { ... }, tag -> {});
+```
+
+**Java 生态的库本来就是给所有 Java 程序用的**，Spring 反而是把它们"圈"进自己的体系，还要你学一套 Spring 特有的 API。
+
+LiteJava 让你回归 Java 本身。
+
 ### vs Javalin
 
 | | Javalin | LiteJava |
@@ -593,6 +634,18 @@ app.use(new JpaPlugin());
 | 性能 | 极致 | **比肩 Go（见性能测试）** |
 | 优势 | 内存极小 | 插件生态丰富、扩展性强、Java 库无缝集成 |
 | 劣势 | 扩展能力有限、需要学 Go | 内存占用略高 |
+
+---
+
+## 📚 文档
+
+| 文档 | 说明 |
+|------|------|
+| [快速入门](docs/quick-start.md) | 5 分钟上手 LiteJava |
+| [插件开发指南](docs/plugin-guide.md) | 如何开发自定义插件 |
+| [最佳实践](docs/best-practices.md) | 项目结构、代码规范 |
+| [性能调优](docs/performance.md) | 服务器选择、JVM 调优 |
+| [Spring Boot 迁移](docs/spring-migration.md) | 从 Spring Boot 迁移到 LiteJava |
 
 ---
 
@@ -621,6 +674,71 @@ LiteJava 不是完全禁止注解，而是控制边界：
 
 **反对的是**：Spring 式注解泛滥，一个类堆十几个注解  
 **接受的是**：数据层/基础设施层的标准注解，简单明确
+
+---
+
+## 核心规则：配置文件优先
+
+**这是 LiteJava 唯一需要了解的"隐性规则"，理解它就没有任何魔法。**
+
+### 配置优先级（从高到低）
+
+1. **use() 后直接设置字段** - 最高优先级，强制覆盖
+2. **配置文件** (application.yml / application.properties)
+3. **代码构造参数**
+4. **字段默认值**
+
+### 为什么配置文件优先？
+
+与 Spring Boot 一致，遵循"配置外部化"原则：
+- 代码里写的是"默认值"
+- 运维可以通过配置文件覆盖，无需改代码
+- 便于不同环境（dev/test/prod）使用不同配置
+
+### 示例
+
+```java
+// 场景 1：构造函数传参会被配置文件覆盖
+app.use(new HttpServerPlugin(9000));  // 传入 9000
+// 但配置文件有 server.port=8080
+// 最终使用 8080（配置文件优先）
+
+// 场景 2：如需代码强制指定，在 use() 后设置
+HttpServerPlugin server = new HttpServerPlugin();
+app.use(server);           // config() 在此执行，读取配置文件
+server.port = 9000;        // 直接覆盖，最终使用 9000
+
+// 场景 3：配置文件没有该配置项
+app.use(new HttpServerPlugin(9000));  // 传入 9000
+// 配置文件没有 server.port
+// 最终使用 9000（构造参数作为默认值）
+```
+
+### 实现原理
+
+插件的 `config()` 方法在 `app.use()` 时立即执行：
+
+```java
+public class ServerPlugin extends Plugin {
+    public int port = 8080;  // 字段默认值
+    
+    public ServerPlugin(int port) {
+        this.port = port;    // 构造参数覆盖默认值
+    }
+    
+    @Override
+    public void config() {
+        // 配置文件有值则覆盖，没有则保持当前值
+        port = app.conf.getInt("server", "port", port);
+    }
+}
+```
+
+执行顺序：
+1. `new ServerPlugin(9000)` → port = 9000
+2. `app.use(server)` → 调用 `config()`
+3. `config()` 读取配置文件，有值则覆盖 → port = 8080
+4. `server.port = 9000` → 直接覆盖 → port = 9000
 
 ---
 

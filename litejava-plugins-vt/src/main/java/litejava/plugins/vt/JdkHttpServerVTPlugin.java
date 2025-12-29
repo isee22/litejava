@@ -79,9 +79,9 @@ public class JdkHttpServerVTPlugin extends ServerPlugin {
         
         try {
             parseRequest(exchange, ctx);
-            app.handle(ctx);
+            app.handler.handle(ctx);
         } catch (Exception e) {
-            app.handleError(ctx, e);
+            app.exception.handleError(ctx, e);
         } finally {
             sendResponse(exchange, ctx);
             contextPool.release(ctx);
@@ -152,7 +152,7 @@ public class JdkHttpServerVTPlugin extends ServerPlugin {
                 exchange.getResponseBody().close();
             }
         } catch (IOException e) {
-            // ignore
+            // 响应写入失败（客户端可能已断开），静默处理
         } finally {
             exchange.close();
         }

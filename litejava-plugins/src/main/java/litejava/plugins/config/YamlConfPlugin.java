@@ -11,6 +11,14 @@ import java.util.Map;
 /**
  * YAML 配置插件 - 从 application.yml 加载配置
  * 
+ * <h2>配置优先级（从低到高）</h2>
+ * <ol>
+ *   <li>配置文件 (application.yml)</li>
+ *   <li>环境配置 (application-{env}.yml)</li>
+ *   <li>环境变量 (SERVER_PORT → server.port)</li>
+ *   <li>命令行参数 (--server.port=9000)</li>
+ * </ol>
+ * 
  * <h2>依赖</h2>
  * <pre>{@code
  * <dependency>
@@ -25,12 +33,11 @@ import java.util.Map;
  * // 默认加载 application.yml
  * app.use(new YamlConfPlugin());
  * 
- * // 指定配置文件
- * app.use(new YamlConfPlugin("config/app.yml"));
+ * // 带命令行参数
+ * app.use(new YamlConfPlugin().args(args));
  * 
- * // 读取配置
- * int port = app.conf.getInt("server", "port", 8080);
- * String dbUrl = app.conf.getString("database", "url", "");
+ * // 指定配置文件和环境
+ * app.use(new YamlConfPlugin("config/app.yml", "dev").args(args));
  * }</pre>
  */
 public class YamlConfPlugin extends ConfPlugin {
@@ -55,6 +62,12 @@ public class YamlConfPlugin extends ConfPlugin {
     }
     
     @Override
+    public YamlConfPlugin args(String[] args) {
+        this.cmdArgs = args;
+        return this;
+    }
+    
+    @Override
     public void config() {
         // 加载主配置
         data = loadYaml(file);
@@ -67,7 +80,9 @@ public class YamlConfPlugin extends ConfPlugin {
             app.env = env;
         }
         
-        // 不调用 super.config()，因为我们已经加载了 YAML 配置
+        // 加载环境变量和命令行参数（继承自 ConfPlugin）
+        loadEnvVars();
+        loadCmdArgs();
     }
     
     @SuppressWarnings("unchecked")

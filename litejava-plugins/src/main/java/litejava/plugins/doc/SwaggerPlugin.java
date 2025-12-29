@@ -1,205 +1,430 @@
 package litejava.plugins.doc;
 
 import io.swagger.v3.core.util.Json;
-import io.swagger.v3.oas.integration.GenericOpenApiContext;
-import io.swagger.v3.oas.integration.SwaggerConfiguration;
-import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.*;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.*;
+import io.swagger.v3.oas.models.parameters.*;
+import io.swagger.v3.oas.models.responses.*;
+import io.swagger.v3.oas.models.security.*;
 import litejava.*;
+import litejava.Route;
 
 import java.util.*;
+import java.util.regex.*;
 
 /**
- * Swagger UI 插件 - 使用 swagger-core 生成 OpenAPI 3.0 文档
+ * Swagger UI 插件 - 从路由表自动生成 OpenAPI 3.0 文档
  * 
- * <h2>快速开始</h2>
+ * <h2>配置</h2>
+ * <pre>
+ * # application.yml
+ * swagger:
+ *   title: My API
+ *   version: 1.0.0
+ *   path: /swagger-ui
+ * </pre>
+ * 
+ * <h2>使用</h2>
  * <pre>{@code
- * // 1. 注册插件
- * app.use(new SwaggerPlugin("My API", "1.0.0").scan(AuthController.class, UserController.class));
+ * app.use(new SwaggerPlugin());
  * 
- * // 2. 访问文档
- * // Swagger UI: http://localhost:8080/swagger-ui
- * // OpenAPI JSON: http://localhost:8080/swagger-ui/openapi.json
+ * // 路由会自动生成文档，也可以添加元数据
+ * app.get("/users/:id", handler)
+ *    .summary("获取用户")
+ *    .description("根据ID获取用户详情")
+ *    .tag("用户");
  * }</pre>
  * 
- * <h2>支持的 Swagger 注解</h2>
- * 
- * <h3>类级别注解</h3>
- * <pre>{@code
- * @Tag(name = "用户管理", description = "用户相关接口")
- * public class UserController { ... }
- * }</pre>
- * 
- * <h3>方法级别注解</h3>
- * <pre>{@code
- * @Operation(
- *     summary = "创建用户",           // 接口摘要（必填）
- *     description = "创建新用户账号",  // 详细描述
- *     tags = {"用户管理"},            // 标签分组
- *     deprecated = false             // 是否废弃
- * )
- * void createUser(Context ctx) { ... }
- * }</pre>
- * 
- * <h3>响应注解</h3>
- * <pre>{@code
- * @ApiResponse(responseCode = "200", description = "成功",
- *     content = @Content(schema = @Schema(implementation = User.class)))
- * @ApiResponse(responseCode = "400", description = "参数错误")
- * @ApiResponse(responseCode = "401", description = "未授权")
- * @ApiResponse(responseCode = "404", description = "用户不存在")
- * void getUser(Context ctx) { ... }
- * 
- * // 或使用 @ApiResponses 包装多个响应
- * @ApiResponses({
- *     @ApiResponse(responseCode = "200", description = "成功"),
- *     @ApiResponse(responseCode = "500", description = "服务器错误")
- * })
- * }</pre>
- * 
- * <h3>参数注解</h3>
- * <pre>{@code
- * @Parameter(name = "id", description = "用户ID", required = true, in = ParameterIn.PATH)
- * @Parameter(name = "page", description = "页码", in = ParameterIn.QUERY)
- * @Parameter(name = "Authorization", description = "认证令牌", in = ParameterIn.HEADER)
- * void getUser(Context ctx) { ... }
- * }</pre>
- * 
- * <h3>请求体注解</h3>
- * <pre>{@code
- * @RequestBody(description = "用户信息", required = true,
- *     content = @Content(schema = @Schema(implementation = CreateUserDTO.class)))
- * void createUser(Context ctx) { ... }
- * }</pre>
- * 
- * <h3>数据模型注解</h3>
- * <pre>{@code
- * @Schema(description = "用户信息")
- * public class User {
- *     @Schema(description = "用户ID", example = "1")
- *     public Long id;
- *     
- *     @Schema(description = "用户名", example = "john", required = true)
- *     public String username;
- *     
- *     @Schema(description = "邮箱", example = "john@example.com")
- *     public String email;
- *     
- *     @Schema(description = "创建时间", accessMode = Schema.AccessMode.READ_ONLY)
- *     public Date createdAt;
- * }
- * }</pre>
- * 
- * <h2>完整示例</h2>
- * <pre>{@code
- * import io.swagger.v3.oas.annotations.*;
- * import io.swagger.v3.oas.annotations.media.*;
- * import io.swagger.v3.oas.annotations.responses.*;
- * import io.swagger.v3.oas.annotations.tags.Tag;
- * 
- * @Tag(name = "认证", description = "用户认证相关接口")
- * public class AuthController {
- *     
- *     @Operation(summary = "用户登录", description = "使用用户名和密码登录系统")
- *     @RequestBody(description = "登录凭证", required = true,
- *         content = @Content(schema = @Schema(implementation = LoginRequest.class)))
- *     @ApiResponse(responseCode = "200", description = "登录成功",
- *         content = @Content(schema = @Schema(implementation = LoginResponse.class)))
- *     @ApiResponse(responseCode = "401", description = "用户名或密码错误")
- *     void login(Context ctx) {
- *         Map<String, Object> body = ctx.bindJSON();
- *         // ... 登录逻辑
- *     }
- *     
- *     @Operation(summary = "获取当前用户")
- *     @Parameter(name = "Authorization", description = "Bearer Token", 
- *         required = true, in = ParameterIn.HEADER)
- *     @ApiResponse(responseCode = "200", description = "成功",
- *         content = @Content(schema = @Schema(implementation = User.class)))
- *     @ApiResponse(responseCode = "401", description = "未授权")
- *     void me(Context ctx) {
- *         // ... 获取当前用户
- *     }
- * }
- * 
- * // 数据模型
- * @Schema(description = "登录请求")
- * public class LoginRequest {
- *     @Schema(description = "用户名", example = "admin", required = true)
- *     public String username;
- *     @Schema(description = "密码", example = "123456", required = true)
- *     public String password;
- * }
- * 
- * @Schema(description = "登录响应")
- * public class LoginResponse {
- *     @Schema(description = "访问令牌")
- *     public String token;
- *     @Schema(description = "过期时间(秒)", example = "3600")
- *     public int expiresIn;
- * }
- * 
- * // 注册路由和文档
- * AuthController auth = new AuthController();
- * app.post("/api/auth/login", auth::login);
- * app.get("/api/auth/me", auth::me);
- * app.use(new SwaggerPlugin("My API", "1.0.0").scan(AuthController.class));
- * }</pre>
- * 
- * <h2>常用注解速查</h2>
- * <table border="1">
- * <tr><th>注解</th><th>位置</th><th>用途</th></tr>
- * <tr><td>@Tag</td><td>类</td><td>接口分组</td></tr>
- * <tr><td>@Operation</td><td>方法</td><td>接口描述</td></tr>
- * <tr><td>@Parameter</td><td>方法</td><td>参数说明</td></tr>
- * <tr><td>@RequestBody</td><td>方法</td><td>请求体说明</td></tr>
- * <tr><td>@ApiResponse</td><td>方法</td><td>响应说明</td></tr>
- * <tr><td>@Schema</td><td>类/字段</td><td>数据模型说明</td></tr>
- * </table>
- * 
- * @see <a href="https://github.com/swagger-api/swagger-core/wiki/Swagger-2.X---Annotations">Swagger Annotations Wiki</a>
+ * <h2>访问</h2>
+ * <ul>
+ * <li>Swagger UI: http://localhost:8080/swagger-ui</li>
+ * <li>OpenAPI JSON: http://localhost:8080/swagger-ui/openapi.json</li>
+ * </ul>
  */
 public class SwaggerPlugin extends Plugin {
     
     public String title = "API Documentation";
     public String version = "1.0.0";
+    public String description = "";
     public String path = "/swagger-ui";
     
-    private final Set<String> classes = new HashSet<>();
-    private String cachedSpec;
+    public String cachedSpec;
     
     public SwaggerPlugin() {}
-    public SwaggerPlugin(String title, String version) { this.title = title; this.version = version; }
-    
-    /** 扫描控制器类的 Swagger 注解 */
-    public SwaggerPlugin scan(Class<?>... classes) {
-        for (Class<?> c : classes) this.classes.add(c.getName());
-        cachedSpec = null;
-        return this;
+    public SwaggerPlugin(String title, String version) { 
+        this.title = title; 
+        this.version = version; 
     }
     
     @Override
     public void config() {
-        app.get(path + "/openapi.json", ctx -> ctx.data(getSpec().getBytes(), "application/json"));
-        app.get(path, ctx -> ctx.html(
-            "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>" + title + "</title>" +
-            "<link rel=\"stylesheet\" href=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\">" +
-            "</head><body><div id=\"swagger-ui\"></div>" +
-            "<script src=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>" +
-            "<script>SwaggerUIBundle({url:'" + path + "/openapi.json',dom_id:'#swagger-ui'});</script></body></html>"));
+        title = app.conf.getString("swagger", "title", title);
+        version = app.conf.getString("swagger", "version", version);
+        description = app.conf.getString("swagger", "description", description);
+        path = app.conf.getString("swagger", "path", path);
+        
+        // 注册路由
+        app.get(path + "/openapi.json", ctx -> ctx.data(getSpec().getBytes("UTF-8"), "application/json"));
+        app.get(path, ctx -> ctx.html(getSwaggerUI()));
     }
     
-    private String getSpec() throws Exception {
+    @Override
+    public void onStart() {
+        int port = app.conf.getInt("server", "port", 8080);
+        app.log.info("Swagger UI: http://localhost:" + port + path);
+    }
+
+    
+    public String getSpec() throws Exception {
         if (cachedSpec != null) return cachedSpec;
         
-        OpenAPI api = new OpenAPI().info(new Info().title(title).version(version));
+        OpenAPI api = new OpenAPI();
+        api.info(new Info().title(title).version(version).description(description));
         
-        if (!classes.isEmpty()) {
-            SwaggerConfiguration config = new SwaggerConfiguration().openAPI(api).resourceClasses(classes);
-            api = new GenericOpenApiContext<>().openApiConfiguration(config).init().read();
+        // 添加 Bearer Token 认证
+        api.components(new Components().addSecuritySchemes("bearerAuth",
+            new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .bearerFormat("JWT")));
+        
+        // 从路由表生成 paths
+        Paths paths = new Paths();
+        Map<String, Set<String>> tagMap = new LinkedHashMap<>();
+        
+        for (Route route : app.router.getAllRoutes()) {
+            // 跳过 swagger 自身的路由
+            if (route.path.startsWith(path)) continue;
+            
+            String openApiPath = convertPath(route.path);
+            PathItem pathItem = paths.get(openApiPath);
+            if (pathItem == null) {
+                pathItem = new PathItem();
+                paths.addPathItem(openApiPath, pathItem);
+            }
+            
+            Operation op = createOperation(route);
+            
+            // 收集 tags
+            if (route.tags != null) {
+                for (String tag : route.tags) {
+                    tagMap.computeIfAbsent(tag, k -> new LinkedHashSet<>());
+                }
+            }
+            
+            // 设置到对应 HTTP 方法
+            switch (route.method) {
+                case "GET": pathItem.get(op); break;
+                case "POST": pathItem.post(op); break;
+                case "PUT": pathItem.put(op); break;
+                case "DELETE": pathItem.delete(op); break;
+                case "PATCH": pathItem.patch(op); break;
+                case "HEAD": pathItem.head(op); break;
+                case "OPTIONS": pathItem.options(op); break;
+                case "ANY":
+                    pathItem.get(op);
+                    pathItem.post(cloneOperation(op));
+                    pathItem.put(cloneOperation(op));
+                    pathItem.delete(cloneOperation(op));
+                    break;
+            }
+        }
+        
+        api.paths(paths);
+        
+        // 添加 tags
+        if (!tagMap.isEmpty()) {
+            List<io.swagger.v3.oas.models.tags.Tag> tags = new ArrayList<>();
+            for (String name : tagMap.keySet()) {
+                tags.add(new io.swagger.v3.oas.models.tags.Tag().name(name));
+            }
+            api.tags(tags);
         }
         
         cachedSpec = Json.pretty(api);
         return cachedSpec;
+    }
+    
+    Operation createOperation(Route route) {
+        Operation op = new Operation();
+        
+        // 尝试从注解读取
+        java.lang.reflect.Method method = findMethod(route);
+        io.swagger.v3.oas.annotations.Operation opAnnotation = null;
+        io.swagger.v3.oas.annotations.tags.Tag classTag = null;
+        io.swagger.v3.oas.annotations.Parameter[] paramAnnotations = null;
+        
+        if (method != null) {
+            opAnnotation = method.getAnnotation(io.swagger.v3.oas.annotations.Operation.class);
+            // 获取方法上的 @Parameter 注解
+            paramAnnotations = method.getAnnotationsByType(io.swagger.v3.oas.annotations.Parameter.class);
+        }
+        if (route.controllerClass != null) {
+            classTag = route.controllerClass.getAnnotation(io.swagger.v3.oas.annotations.tags.Tag.class);
+        }
+        
+        // 基本信息（优先注解，其次 Route 字段，最后自动生成）
+        String summary = null;
+        String desc = null;
+        
+        if (opAnnotation != null) {
+            if (!opAnnotation.summary().isEmpty()) summary = opAnnotation.summary();
+            if (!opAnnotation.description().isEmpty()) desc = opAnnotation.description();
+        }
+        if (summary == null && route.summary != null) summary = route.summary;
+        if (desc == null && route.description != null) desc = route.description;
+        if (summary == null) summary = generateSummary(route);
+        
+        op.summary(summary);
+        if (desc != null) op.description(desc);
+        
+        // Tags（优先注解，其次 Route 字段，最后自动生成）
+        List<String> tags = new ArrayList<>();
+        if (opAnnotation != null && opAnnotation.tags().length > 0) {
+            for (String t : opAnnotation.tags()) {
+                if (!t.isEmpty()) tags.add(t);
+            }
+        }
+        if (tags.isEmpty() && classTag != null && !classTag.name().isEmpty()) {
+            tags.add(classTag.name());
+        }
+        if (tags.isEmpty() && route.tags != null && route.tags.length > 0) {
+            tags.addAll(Arrays.asList(route.tags));
+        }
+        if (tags.isEmpty()) {
+            String tag = guessTag(route.path);
+            if (tag != null) tags.add(tag);
+        }
+        if (!tags.isEmpty()) op.tags(tags);
+        
+        // 构建参数名到注解的映射
+        Map<String, io.swagger.v3.oas.annotations.Parameter> paramMap = new HashMap<>();
+        if (paramAnnotations != null) {
+            for (io.swagger.v3.oas.annotations.Parameter pa : paramAnnotations) {
+                if (!pa.name().isEmpty()) {
+                    paramMap.put(pa.name(), pa);
+                }
+            }
+        }
+        
+        // 路径参数
+        List<String> pathParams = extractPathParams(route.path);
+        for (String param : pathParams) {
+            Parameter p = new PathParameter()
+                .name(param)
+                .required(true)
+                .schema(new StringSchema());
+            
+            // 从注解读取描述
+            io.swagger.v3.oas.annotations.Parameter pa = paramMap.get(param);
+            if (pa != null && !pa.description().isEmpty()) {
+                p.description(pa.description());
+            }
+            op.addParametersItem(p);
+        }
+        
+        // 从注解添加 Query 参数
+        if (paramAnnotations != null) {
+            for (io.swagger.v3.oas.annotations.Parameter pa : paramAnnotations) {
+                if (pa.in() == io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) {
+                    Parameter p = new QueryParameter()
+                        .name(pa.name())
+                        .required(pa.required())
+                        .schema(new StringSchema());
+                    if (!pa.description().isEmpty()) {
+                        p.description(pa.description());
+                    }
+                    op.addParametersItem(p);
+                }
+            }
+        }
+        
+        // Request Body（POST/PUT/PATCH）
+        if ("POST".equals(route.method) || "PUT".equals(route.method) || "PATCH".equals(route.method)) {
+            RequestBody body = new RequestBody();
+            MediaType mediaType = new MediaType();
+            
+            // 尝试从 @Operation 的 requestBody 获取 schema
+            ObjectSchema schema = new ObjectSchema();
+            if (opAnnotation != null && opAnnotation.requestBody() != null) {
+                io.swagger.v3.oas.annotations.parameters.RequestBody rb = opAnnotation.requestBody();
+                if (!rb.description().isEmpty()) {
+                    body.description(rb.description());
+                }
+                body.required(rb.required());
+            }
+            
+            mediaType.schema(schema);
+            body.content(new Content().addMediaType("application/json", mediaType));
+            op.requestBody(body);
+        }
+        
+        // Responses - 从 @ApiResponses 注解读取
+        ApiResponses responses = new ApiResponses();
+        io.swagger.v3.oas.annotations.responses.ApiResponses apiResponsesAnnotation = null;
+        if (method != null) {
+            apiResponsesAnnotation = method.getAnnotation(io.swagger.v3.oas.annotations.responses.ApiResponses.class);
+        }
+        
+        if (apiResponsesAnnotation != null && apiResponsesAnnotation.value().length > 0) {
+            for (io.swagger.v3.oas.annotations.responses.ApiResponse ar : apiResponsesAnnotation.value()) {
+                ApiResponse response = new ApiResponse().description(ar.description());
+                
+                // 处理 content
+                if (ar.content().length > 0) {
+                    Content content = new Content();
+                    for (io.swagger.v3.oas.annotations.media.Content c : ar.content()) {
+                        MediaType mediaType = new MediaType();
+                        // 处理 examples
+                        if (c.examples().length > 0) {
+                            Map<String, io.swagger.v3.oas.models.examples.Example> examples = new LinkedHashMap<>();
+                            int idx = 0;
+                            for (io.swagger.v3.oas.annotations.media.ExampleObject ex : c.examples()) {
+                                io.swagger.v3.oas.models.examples.Example example = new io.swagger.v3.oas.models.examples.Example();
+                                if (!ex.value().isEmpty()) {
+                                    example.setValue(ex.value());
+                                }
+                                if (!ex.name().isEmpty()) {
+                                    examples.put(ex.name(), example);
+                                } else {
+                                    examples.put("example" + (idx++), example);
+                                }
+                            }
+                            mediaType.setExamples(examples);
+                        }
+                        String mt = c.mediaType().isEmpty() ? "application/json" : c.mediaType();
+                        content.addMediaType(mt, mediaType);
+                    }
+                    response.content(content);
+                }
+                
+                responses.addApiResponse(ar.responseCode(), response);
+            }
+        } else {
+            responses.addApiResponse("200", new ApiResponse().description("成功"));
+        }
+        op.responses(responses);
+        
+        // 需要认证的路由
+        if (needsAuth(route.path)) {
+            op.addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
+        }
+        
+        return op;
+    }
+    
+    /** 根据 Route 信息查找对应的 Method */
+    java.lang.reflect.Method findMethod(Route route) {
+        if (route.controllerClass == null || route.methodName == null) return null;
+        
+        try {
+            for (java.lang.reflect.Method m : route.controllerClass.getDeclaredMethods()) {
+                if (m.getName().equals(route.methodName)) {
+                    return m;
+                }
+            }
+        } catch (Exception e) {
+            // 忽略
+        }
+        return null;
+    }
+
+    
+    Operation cloneOperation(Operation op) {
+        Operation clone = new Operation();
+        clone.summary(op.getSummary());
+        clone.description(op.getDescription());
+        clone.tags(op.getTags());
+        clone.parameters(op.getParameters());
+        clone.requestBody(op.getRequestBody());
+        clone.responses(op.getResponses());
+        clone.security(op.getSecurity());
+        return clone;
+    }
+    
+    /** 转换路径格式：:id -> {id} */
+    String convertPath(String path) {
+        return path.replaceAll(":([a-zA-Z][a-zA-Z0-9]*)", "{$1}")
+                   .replaceAll("\\*([a-zA-Z][a-zA-Z0-9]*)", "{$1}");
+    }
+    
+    /** 提取路径参数 */
+    List<String> extractPathParams(String path) {
+        List<String> params = new ArrayList<>();
+        Matcher m = Pattern.compile(":([a-zA-Z][a-zA-Z0-9]*)").matcher(path);
+        while (m.find()) params.add(m.group(1));
+        m = Pattern.compile("\\*([a-zA-Z][a-zA-Z0-9]*)").matcher(path);
+        while (m.find()) params.add(m.group(1));
+        return params;
+    }
+    
+    /** 从路径猜测 tag */
+    String guessTag(String path) {
+        String[] parts = path.split("/");
+        for (String part : parts) {
+            if (!part.isEmpty() && !part.startsWith(":") && !part.startsWith("*")) {
+                if ("api".equals(part) || "v1".equals(part) || "v2".equals(part)) continue;
+                return capitalize(part);
+            }
+        }
+        return null;
+    }
+    
+    /** 生成默认 summary */
+    String generateSummary(Route route) {
+        String path = route.path;
+        String method = route.method;
+        
+        // 提取资源名
+        String[] parts = path.split("/");
+        String resource = null;
+        for (int i = parts.length - 1; i >= 0; i--) {
+            String part = parts[i];
+            if (!part.isEmpty() && !part.startsWith(":") && !part.startsWith("*")) {
+                resource = part;
+                break;
+            }
+        }
+        if (resource == null) resource = "资源";
+        
+        // 根据方法和路径生成描述
+        boolean hasId = path.contains(":id") || path.contains(":") || path.contains("*");
+        switch (method) {
+            case "GET": return hasId ? "获取" + resource + "详情" : "获取" + resource + "列表";
+            case "POST": return "创建" + resource;
+            case "PUT": return "更新" + resource;
+            case "DELETE": return "删除" + resource;
+            case "PATCH": return "部分更新" + resource;
+            default: return method + " " + path;
+        }
+    }
+    
+    /** 判断是否需要认证 */
+    boolean needsAuth(String path) {
+        // 公开接口
+        if (path.equals("/") || path.equals("/health")) return false;
+        if (path.startsWith("/api/auth")) return false;
+        if (path.startsWith("/uploads")) return false;
+        if (path.startsWith("/static")) return false;
+        if (path.startsWith(this.path)) return false;
+        
+        // GET 请求的列表/详情通常公开
+        // 但这里保守处理，默认需要认证
+        return true;
+    }
+    
+    String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+    
+    String getSwaggerUI() {
+        return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>" + title + "</title>" +
+            "<link rel=\"stylesheet\" href=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui.css\">" +
+            "</head><body><div id=\"swagger-ui\"></div>" +
+            "<script src=\"https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>" +
+            "<script>SwaggerUIBundle({url:'" + path + "/openapi.json',dom_id:'#swagger-ui'," +
+            "deepLinking:true,presets:[SwaggerUIBundle.presets.apis]});</script></body></html>";
     }
 }

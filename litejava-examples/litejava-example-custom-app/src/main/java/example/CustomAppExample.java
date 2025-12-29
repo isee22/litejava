@@ -1,21 +1,24 @@
 package example;
 
+import litejava.App;
 import litejava.plugins.config.YamlConfPlugin;
 import litejava.plugins.json.JacksonPlugin;
 import litejava.plugins.server.JettyServerPlugin;
+import litejava.util.Maps;
 
+import java.util.Arrays;
 import java.util.Map;
 
 /**
  * 自定义 App 使用示例
  * 
- * <p>演示如何使用继承自 App 的 MyApp 类。
+ * <p>演示如何使用 MyApp 工厂类创建自定义 App。
  */
 public class CustomAppExample {
     
     public static void main(String[] args) {
-        // 使用自定义 App
-        MyApp app = new MyApp();
+        // 使用自定义 App（已包含 MyHandlerPlugin 和 MyExceptionPlugin）
+        App app = MyApp.create();
         
         // 注册插件
         app.use(new YamlConfPlugin());
@@ -23,12 +26,12 @@ public class CustomAppExample {
         app.use(new JettyServerPlugin());
         
         // 正常路由 - 使用统一响应格式
-        app.get("/", ctx -> MyApp.ok(ctx, Map.of("message", "Hello from MyApp!")));
+        app.get("/", ctx -> MyApp.ok(ctx, Maps.of("message", "Hello from MyApp!")));
         
         app.get("/users", ctx -> {
-            java.util.List<Map<String, Object>> users = java.util.Arrays.asList(
-                Map.of("id", 1, "name", "Alice"),
-                Map.of("id", 2, "name", "Bob")
+            java.util.List<Map<String, Object>> users = Arrays.asList(
+                Maps.of("id", 1, "name", "Alice"),
+                Maps.of("id", 2, "name", "Bob")
             );
             MyApp.ok(ctx, users);
         });
@@ -38,7 +41,7 @@ public class CustomAppExample {
             if (id <= 0) {
                 throw new IllegalArgumentException("Invalid user id");
             }
-            MyApp.ok(ctx, Map.of("id", id, "name", "User" + id));
+            MyApp.ok(ctx, Maps.of("id", id, "name", "User" + id));
         });
         
         // 测试错误处理

@@ -893,10 +893,19 @@ app.use((ctx, next) -> {
 3. **自定义错误处理**
 
 ```java
-app.onError((ctx, error) -> {
-    // 自定义错误处理逻辑
-    ctx.status(500).json(Map.of("message", "Something went wrong"));
-});
+// 方式一：设置自定义 handler
+app.exception.handler = (ctx, e) -> {
+    ctx.status(500).json(Maps.of("message", "Something went wrong"));
+};
+
+// 方式二：继承 ExceptionPlugin
+public class MyExceptionPlugin extends ExceptionPlugin {
+    @Override
+    public void handleError(Context ctx, Exception e) {
+        ctx.status(500).json(Maps.of("error", e.getMessage()));
+    }
+}
+app.use(new MyExceptionPlugin());
 ```
 
 ## Testing Strategy

@@ -22,6 +22,12 @@ public class Route {
     public final String path;
     public final Handler handler;
     
+    /** 方法名（用于注解扫描） */
+    public String methodName;
+    
+    /** Controller 类（用于注解扫描） */
+    public Class<?> controllerClass;
+    
     // 文档元数据
     public String summary;
     public String description;

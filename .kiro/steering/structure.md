@@ -22,7 +22,9 @@ litejava/
 │           ├── ServerPlugin.java    # 服务器基类
 │           ├── StaticFilePlugin.java # 静态文件
 │           ├── JsonPlugin.java      # JSON 基类
-│           └── ViewPlugin.java      # 视图基类
+│           ├── ViewPlugin.java      # 视图基类
+│           ├── ExceptionPlugin.java # 异常处理
+│           └── HandlerPlugin.java   # 请求处理
 │
 └── litejava-plugins/            # 可选插件 (有外部依赖)
     ├── pom.xml
@@ -32,7 +34,7 @@ litejava/
         ├── database/            # JdbcPlugin, MyBatisPlugin, JpaPlugin
         ├── cache/               # RedisCachePlugin, MemcacheCachePlugin
         ├── view/                # ThymeleafPlugin, FreemarkerPlugin
-        ├── http/                # CorsPlugin, ExceptionPlugin
+        ├── http/                # CorsPlugin
         ├── health/              # HealthPlugin
         ├── annotation/          # JaxRsAnnotationPlugin, SpringMvcAnnotationPlugin
         └── server/              # NettyServerPlugin, UndertowServerPlugin

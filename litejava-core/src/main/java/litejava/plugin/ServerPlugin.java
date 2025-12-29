@@ -11,6 +11,28 @@ import litejava.Plugin;
  *   <li>{@link #stop()} - 停止服务器</li>
  * </ul>
  * 
+ * <h2>配置优先级</h2>
+ * <p><b>重要：配置文件优先于代码设置。</b>
+ * <p>这是 LiteJava 的核心规则，与 Spring Boot 一致：
+ * <ol>
+ *   <li>配置文件 (application.yml / application.properties)</li>
+ *   <li>代码构造参数</li>
+ *   <li>字段默认值</li>
+ * </ol>
+ * 
+ * <pre>{@code
+ * // 代码设置端口 9000
+ * app.use(new HttpServerPlugin(9000));
+ * 
+ * // 但配置文件有 server.port=8080
+ * // 最终使用 8080（配置文件优先）
+ * 
+ * // 如需代码强制覆盖，在 use() 后设置：
+ * HttpServerPlugin server = new HttpServerPlugin();
+ * app.use(server);
+ * server.port = 9000;  // config() 已执行，直接覆盖生效
+ * }</pre>
+ * 
  * <h2>通用配置项</h2>
  * <pre>
  * # application.properties 或 application.yml
@@ -45,7 +67,7 @@ import litejava.Plugin;
  *             Context ctx = new Context();
  *             ctx.app = app;
  *             // 解析请求...
- *             app.handle(ctx);
+ *             app.handler.handle(ctx);
  *             // 发送响应...
  *         });
  *         server.start();
@@ -100,6 +122,16 @@ public class ServerPlugin extends Plugin {
     
     /**
      * 构造函数 - 指定端口
+     * 
+     * <p><b>注意：配置文件优先。</b>如果配置文件中有 server.port，
+     * 将覆盖此处传入的值。如需代码强制指定，请在 use() 后设置：
+     * <pre>{@code
+     * HttpServerPlugin server = new HttpServerPlugin();
+     * app.use(server);
+     * server.port = 9000;  // 强制覆盖
+     * }</pre>
+     * 
+     * @param port 服务器端口（作为默认值，可被配置文件覆盖）
      */
     public ServerPlugin(int port) {
         this.port = port;
@@ -107,6 +139,18 @@ public class ServerPlugin extends Plugin {
     
     /**
      * 构造函数 - 指定端口和主机
+     * 
+     * <p><b>注意：配置文件优先。</b>如果配置文件中有 server.port 或 server.host，
+     * 将覆盖此处传入的值。如需代码强制指定，请在 use() 后设置：
+     * <pre>{@code
+     * HttpServerPlugin server = new HttpServerPlugin();
+     * app.use(server);
+     * server.port = 9000;
+     * server.host = "127.0.0.1";
+     * }</pre>
+     * 
+     * @param port 服务器端口（作为默认值，可被配置文件覆盖）
+     * @param host 绑定地址（作为默认值，可被配置文件覆盖）
      */
     public ServerPlugin(int port, String host) {
         this.port = port;

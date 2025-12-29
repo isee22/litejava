@@ -94,7 +94,7 @@ public class JettyServerPlugin extends ServerPlugin {
             try {
                 server.stop();
             } catch (Exception e) {
-                // ignore
+                app.log.warn("Jetty server stop error: " + e.getMessage());
             }
         }
     }
@@ -107,9 +107,9 @@ public class JettyServerPlugin extends ServerPlugin {
             
             try {
                 parseRequest(request, ctx);
-                app.handle(ctx);
+                app.handler.handle(ctx);
             } catch (Exception e) {
-                app.handleError(ctx, e);
+                app.exception.handleError(ctx, e);
             } finally {
                 sendResponse(response, ctx);
                 baseRequest.setHandled(true);
@@ -188,7 +188,7 @@ public class JettyServerPlugin extends ServerPlugin {
                 response.getOutputStream().write(body);
             }
         } catch (Exception e) {
-            // ignore
+            // Response already committed or client disconnected
         }
     }
 }

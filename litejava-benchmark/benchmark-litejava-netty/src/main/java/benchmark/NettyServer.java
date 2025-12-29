@@ -5,10 +5,10 @@ import litejava.plugin.ConfPlugin;
 import litejava.plugin.StaticFilePlugin;
 import litejava.plugins.database.JdbcPlugin;
 import litejava.plugins.dataSource.HikariPlugin;
+import litejava.plugins.json.GoJsonPlugin;
 import litejava.plugins.log.Slf4jLogPlugin;
 import litejava.plugins.server.NettyServerPlugin;
 import litejava.plugins.view.ThymeleafPlugin;
-import litejava.plugins.vt.GoJsonPlugin;
 
 import java.util.*;
 
@@ -26,7 +26,11 @@ public class NettyServer {
         app.use(hikari);
         JdbcPlugin jdbc = new JdbcPlugin(hikari);
         app.use(jdbc);
-        app.use(new NettyServerPlugin());
+        
+        // 端口通过配置文件 server.port 设置，或 use 后覆盖
+        NettyServerPlugin server = new NettyServerPlugin();
+        app.use(server);
+        server.port = 8186;  // config() 已执行，直接覆盖
         app.use(new ThymeleafPlugin("templates/"));
         app.use(new StaticFilePlugin("/static", "static"));
         
@@ -61,9 +65,8 @@ public class NettyServer {
             ));
         });
         
-        int port = 8186;
-        app.run(port);
-        System.out.println("Netty started in " + (System.currentTimeMillis() - start) + "ms on port " + port);
+        app.run();
+        System.out.println("Netty started in " + (System.currentTimeMillis() - start) + "ms on port " + server.port);
     }
     
     private static int parseInt(String s, int def) { return s != null ? Integer.parseInt(s) : def; }

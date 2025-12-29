@@ -1,214 +1,161 @@
 package litejava.plugin;
 
 import litejava.*;
+import litejava.util.Files;
 
-import java.io.*;
-import java.nio.file.*;
 import java.util.*;
 
 /**
- * 静态文件目录插件 - Gin-style 路由方式提供静态资源
+ * 静态文件插件 - Gin 风格 URL-目录映射
  * 
- * <h2>使用示例</h2>
+ * <h2>代码配置（Gin 风格）</h2>
  * <pre>{@code
- * // 方式一：便捷方法（推荐）
- * app.staticDir("/static", "static");
- * 
- * // 方式二：插件方式（可自定义配置）
- * StaticFilePlugin plugin = new StaticFilePlugin("/static", "static");
- * plugin.cacheMaxAge = 86400;
- * plugin.indexFile = "home.html";
- * app.use(plugin);
- * 
- * // 方式三：继承扩展
- * class MyStaticPlugin extends StaticFilePlugin {
- *     public MyStaticPlugin() { super("/static", "static"); }
- *     @Override
- *     protected void beforeServe(Context ctx, String filepath) {
- *         ctx.header("X-Custom", "value");
- *     }
- * }
- * app.use(new MyStaticPlugin());
+ * app.use(new StaticFilePlugin()
+ *     .add("/static", "static/")
+ *     .add("/uploads", "/data/uploads/"));
  * }</pre>
  * 
- * @see SingleFilePlugin 单文件插件
+ * <h2>配置文件 - YAML</h2>
+ * <pre>
+ * static:
+ *   mappings:
+ *     /static: static/
+ *     /uploads: /data/uploads/
+ *   cache-max-age: 3600
+ *   index-file: index.html
+ * </pre>
+ * 
+ * <h2>配置文件 - Properties</h2>
+ * <pre>
+ * static.mappings./static=static/
+ * static.mappings./uploads=/data/uploads/
+ * static.cache-max-age=3600
+ * static.index-file=index.html
+ * </pre>
+ * 
+ * <h2>配置项说明</h2>
+ * <table border="1">
+ *   <tr><th>配置项</th><th>类型</th><th>默认值</th><th>说明</th></tr>
+ *   <tr><td>static.mappings</td><td>Map</td><td>-</td><td>URL前缀 → 目录 映射</td></tr>
+ *   <tr><td>static.cache-max-age</td><td>int</td><td>3600</td><td>浏览器缓存时间（秒）</td></tr>
+ *   <tr><td>static.index-file</td><td>String</td><td>index.html</td><td>目录默认首页文件</td></tr>
+ * </table>
+ * 
+ * <h2>路径格式示例</h2>
+ * <pre>
+ * # 相对路径（自动检测：先文件系统，没有再 classpath）
+ * /static: static/
+ * 
+ * # Linux/Mac 绝对路径 → 文件系统
+ * /uploads: /data/uploads/
+ * 
+ * # Windows 绝对路径 → 文件系统
+ * /uploads: D:/git/project/uploads/
+ * 
+ * # 强制 classpath（JAR 包内资源）
+ * /assets: classpath:assets/
+ * 
+ * # 强制文件系统
+ * /files: file:/var/www/files/
+ * </pre>
+ * 
+ * @author LiteJava Team
+ * @since 1.0.0
  */
 public class StaticFilePlugin extends Plugin {
     
-    public String urlPrefix;
-    public String directory;
-    public String indexFile = "index.html";
-    public int cacheMaxAge = 3600;
-    public boolean useFileSystem = false;
+    /** URL前缀 -> 目录 映射 */
+    public Map<String, String> mappings = new LinkedHashMap<>();
     
-    private static final Map<String, String> MIME_TYPES = new HashMap<>();
-    static {
-        MIME_TYPES.put("html", "text/html");
-        MIME_TYPES.put("htm", "text/html");
-        MIME_TYPES.put("css", "text/css");
-        MIME_TYPES.put("js", "application/javascript");
-        MIME_TYPES.put("json", "application/json");
-        MIME_TYPES.put("xml", "application/xml");
-        MIME_TYPES.put("txt", "text/plain");
-        MIME_TYPES.put("png", "image/png");
-        MIME_TYPES.put("jpg", "image/jpeg");
-        MIME_TYPES.put("jpeg", "image/jpeg");
-        MIME_TYPES.put("gif", "image/gif");
-        MIME_TYPES.put("svg", "image/svg+xml");
-        MIME_TYPES.put("ico", "image/x-icon");
-        MIME_TYPES.put("woff", "font/woff");
-        MIME_TYPES.put("woff2", "font/woff2");
-        MIME_TYPES.put("ttf", "font/ttf");
-        MIME_TYPES.put("eot", "application/vnd.ms-fontobject");
-        MIME_TYPES.put("pdf", "application/pdf");
-        MIME_TYPES.put("zip", "application/zip");
-        MIME_TYPES.put("mp4", "video/mp4");
-        MIME_TYPES.put("webm", "video/webm");
-        MIME_TYPES.put("mp3", "audio/mpeg");
-        MIME_TYPES.put("wav", "audio/wav");
-    }
+    /** 默认首页文件 */
+    public String indexFile = "index.html";
+    
+    /** 缓存时间（秒） */
+    public int cacheMaxAge = 3600;
+    
+    public StaticFilePlugin() {}
     
     /**
-     * 默认构造函数（用于配置文件自动配置）
-     * <p>需要通过字段设置 urlPrefix 和 directory
+     * 添加 URL-目录映射（Gin 风格）
+     * @param urlPrefix URL 前缀，如 "/static"
+     * @param directory 目录路径，如 "static/" 或 "file:/data/uploads/"
      */
-    public StaticFilePlugin() {
-        this.urlPrefix = "/static";
-        this.directory = "static/";
-    }
-    
-    public StaticFilePlugin(String urlPrefix, String directory) {
-        this.urlPrefix = urlPrefix;
-        this.directory = directory.endsWith("/") ? directory : directory + "/";
-        this.useFileSystem = new File(directory).exists();
-    }
-    
-    public StaticFilePlugin(String urlPrefix, String directory, boolean useFileSystem) {
-        this.urlPrefix = urlPrefix;
-        this.directory = directory.endsWith("/") ? directory : directory + "/";
-        this.useFileSystem = useFileSystem;
+    public StaticFilePlugin add(String urlPrefix, String directory) {
+        mappings.put(urlPrefix, directory);
+        return this;
     }
     
     @Override
     public void config() {
-        cacheMaxAge = app.conf.getInt("static", "cacheMaxAge", cacheMaxAge);
-        indexFile = app.conf.getString("static", "indexFile", indexFile);
+        // 从配置文件加载（kebab-case）
+        cacheMaxAge = app.conf.getInt("static", "cache-max-age", cacheMaxAge);
+        indexFile = app.conf.getString("static", "index-file", indexFile);
         
-        // 注册通配符路由（Gin-style）
+        // 从配置文件加载 mappings
+        Map<String, Object> confMappings = app.conf.get("static.mappings");
+        if (confMappings != null) {
+            for (Map.Entry<String, Object> entry : confMappings.entrySet()) {
+                String urlPrefix = entry.getKey();
+                String directory = String.valueOf(entry.getValue());
+                if (!mappings.containsKey(urlPrefix)) {
+                    mappings.put(urlPrefix, directory);
+                }
+            }
+        }
+        
+        // 注册路由
+        for (Map.Entry<String, String> entry : mappings.entrySet()) {
+            String urlPrefix = entry.getKey();
+            String directory = entry.getValue();
+            registerRoutes(urlPrefix, directory);
+        }
+    }
+    
+    /**
+     * 注册静态文件路由
+     */
+    public void registerRoutes(String urlPrefix, String directory) {
+        String dir = directory.endsWith("/") ? directory : directory + "/";
+        
+        // 注册通配符路由
         String routePath = urlPrefix.endsWith("/") 
             ? urlPrefix + "*filepath" 
             : urlPrefix + "/*filepath";
         
-        app.get(routePath, this::handleStatic);
+        app.get(routePath, ctx -> serveFile(ctx, dir, ctx.pathParam("filepath")));
         
-        // 同时注册不带通配符的路径（访问目录根）
+        // 注册目录根路由（返回 index.html）
         String basePath = urlPrefix.endsWith("/") 
             ? urlPrefix.substring(0, urlPrefix.length() - 1) 
             : urlPrefix;
-        app.get(basePath, this::handleIndex);
+        app.get(basePath, ctx -> serveFile(ctx, dir, indexFile));
     }
     
     /**
-     * 处理静态文件请求
+     * 提供文件服务
      */
-    private void handleStatic(Context ctx) throws Exception {
-        String filepath = ctx.pathParam("filepath");
+    public void serveFile(Context ctx, String directory, String filepath) throws Exception {
         if (filepath == null || filepath.isEmpty()) {
             filepath = indexFile;
         }
         
-        serveFile(ctx, filepath);
-    }
-    
-    /**
-     * 处理目录根请求
-     */
-    private void handleIndex(Context ctx) throws Exception {
-        serveFile(ctx, indexFile);
-    }
-    
-    /**
-     * 提供文件服务（protected 允许子类重写）
-     */
-    protected void serveFile(Context ctx, String filepath) throws Exception {
         // 防止路径遍历攻击
         if (filepath.contains("..")) {
             ctx.status(403).text("Forbidden");
             return;
         }
         
-        byte[] content;
-        if (useFileSystem) {
-            content = readFromFileSystem(filepath);
-        } else {
-            content = readFromClasspath(filepath);
-        }
+        byte[] content = Files.read(directory, filepath);
         
         if (content == null) {
             ctx.status(404).text("Not Found");
             return;
         }
         
-        String ext = getExtension(filepath);
-        String mimeType = MIME_TYPES.getOrDefault(ext, "application/octet-stream");
+        String mimeType = Files.getMimeType(filepath);
         
         ctx.status(200)
            .header("Cache-Control", "public, max-age=" + cacheMaxAge)
            .data(content, mimeType);
-    }
-    
-    private byte[] readFromFileSystem(String relativePath) {
-        try {
-            System.out.println("[StaticFile] directory: " + directory);
-            System.out.println("[StaticFile] relativePath: " + relativePath);
-            
-            Path basePath = Paths.get(directory).toAbsolutePath().normalize();
-            Path filePath = basePath.resolve(relativePath).normalize();
-            
-            System.out.println("[StaticFile] basePath: " + basePath);
-            System.out.println("[StaticFile] filePath: " + filePath);
-            System.out.println("[StaticFile] exists: " + filePath.toFile().exists());
-            
-            // 确保路径在目录内
-            if (!filePath.startsWith(basePath)) {
-                return null;
-            }
-            File file = filePath.toFile();
-            if (file.exists() && file.isFile()) {
-                return Files.readAllBytes(file.toPath());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-    
-    private byte[] readFromClasspath(String relativePath) {
-        String resourcePath = directory + relativePath;
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
-            if (is == null) return null;
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = is.read(buffer)) != -1) {
-                bos.write(buffer, 0, len);
-            }
-            return bos.toByteArray();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-    
-    private String getExtension(String filename) {
-        int dot = filename.lastIndexOf('.');
-        return dot > 0 ? filename.substring(dot + 1).toLowerCase() : "";
-    }
-    
-    /**
-     * 获取 MIME 类型
-     */
-    public static String getMimeType(String filename) {
-        String ext = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
-        return MIME_TYPES.getOrDefault(ext, "application/octet-stream");
     }
 }

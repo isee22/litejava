@@ -66,7 +66,7 @@ package litejava;
  * @see App 应用容器
  */
 @FunctionalInterface
-public interface Handler {
+public interface Handler extends java.io.Serializable {
     
     /**
      * 处理 HTTP 请求

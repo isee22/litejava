@@ -36,7 +36,7 @@ import java.util.*;
  * 
  * // 表单/文件
  * Map<String, String> form = ctx.getForm();
- * Map<String, UploadedFile> files = ctx.getFiles();
+ * UploadedFile file = ctx.file("avatar");
  * }</pre>
  * 
  * <h2>发送响应 (Gin-style)</h2>
@@ -144,6 +144,9 @@ public class Context {
     
     /** 响应 Content-Type */
     private String responseContentType;
+    
+    /** 是否已设置响应体（用于检测重复响应） */
+    private boolean responded = false;
     
     // ==================== 请求体 ====================
     
@@ -291,25 +294,65 @@ public class Context {
     }
     
     /**
-     * 解析 multipart/form-data 文件上传（兼容旧 API）
+     * 获取单个上传文件
      * 
-     * @return 文件 Map，key 为表单字段名
-     * @deprecated 推荐使用 {@link #file(String)} 或 {@link #files(String)}
+     * <pre>{@code
+     * UploadedFile avatar = ctx.file("avatar");
+     * if (avatar != null) {
+     *     String path = app.file.save(avatar, "avatars");
+     *     ctx.ok(Maps.of("url", "/files/" + path));
+     * }
+     * }</pre>
+     * 
+     * @param fieldName 表单字段名
+     * @return 上传文件，不存在返回 null
      */
-    @Deprecated
-    public Map<String, UploadedFile> getFiles() {
-        Map<String, UploadedFile> result = new LinkedHashMap<>();
+    public UploadedFile file(String fieldName) {
         if (app != null && app.file != null) {
-            Map<String, java.util.List<UploadedFile>> files = app.file.parseMultipart(this);
-            for (Map.Entry<String, java.util.List<UploadedFile>> entry : files.entrySet()) {
-                if (!entry.getValue().isEmpty()) {
-                    result.put(entry.getKey(), entry.getValue().get(0));
-                }
-            }
-            return result;
+            return app.file.getFile(this, fieldName);
         }
+        return parseFilesInternal().get(fieldName);
+    }
+    
+    /**
+     * 获取多个上传文件（同一字段名）
+     * 
+     * <pre>{@code
+     * List<UploadedFile> photos = ctx.files("photos");
+     * for (UploadedFile photo : photos) {
+     *     app.file.save(photo, "gallery");
+     * }
+     * }</pre>
+     * 
+     * @param fieldName 表单字段名
+     * @return 文件列表，不存在返回空列表
+     */
+    public java.util.List<UploadedFile> files(String fieldName) {
+        if (app != null && app.file != null) {
+            return app.file.getFiles(this, fieldName);
+        }
+        UploadedFile file = parseFilesInternal().get(fieldName);
+        return file != null ? java.util.Collections.singletonList(file) : java.util.Collections.emptyList();
+    }
+    
+    /**
+     * 获取所有上传文件
+     * 
+     * @return 所有文件列表
+     */
+    public java.util.List<UploadedFile> allFiles() {
+        if (app != null && app.file != null) {
+            return app.file.getAllFiles(this);
+        }
+        return new java.util.ArrayList<>(parseFilesInternal().values());
+    }
+    
+    /**
+     * 内部方法：解析 multipart 文件（降级方案，无 FilePlugin 时使用）
+     */
+    private Map<String, UploadedFile> parseFilesInternal() {
+        Map<String, UploadedFile> result = new LinkedHashMap<>();
         
-        // 降级到内置解析（无 FilePlugin 时）
         String contentType = headers.get("Content-Type");
         if (contentType == null) contentType = headers.get("content-type");
         if (contentType == null || !contentType.startsWith("multipart/form-data")) {
@@ -331,60 +374,6 @@ public class Context {
         }
         
         return result;
-    }
-    
-    /**
-     * 获取单个上传文件
-     * 
-     * <pre>{@code
-     * UploadedFile avatar = ctx.file("avatar");
-     * if (avatar != null) {
-     *     String path = app.file.save(avatar, "avatars");
-     *     ctx.ok(Map.of("url", "/files/" + path));
-     * }
-     * }</pre>
-     * 
-     * @param fieldName 表单字段名
-     * @return 上传文件，不存在返回 null
-     */
-    public UploadedFile file(String fieldName) {
-        if (app != null && app.file != null) {
-            return app.file.getFile(this, fieldName);
-        }
-        return getFiles().get(fieldName);
-    }
-    
-    /**
-     * 获取多个上传文件（同一字段名）
-     * 
-     * <pre>{@code
-     * List<UploadedFile> photos = ctx.files("photos");
-     * for (UploadedFile photo : photos) {
-     *     app.file.save(photo, "gallery");
-     * }
-     * }</pre>
-     * 
-     * @param fieldName 表单字段名
-     * @return 文件列表，不存在返回空列表
-     */
-    public java.util.List<UploadedFile> files(String fieldName) {
-        if (app != null && app.file != null) {
-            return app.file.getFiles(this, fieldName);
-        }
-        UploadedFile file = getFiles().get(fieldName);
-        return file != null ? java.util.Collections.singletonList(file) : java.util.Collections.emptyList();
-    }
-    
-    /**
-     * 获取所有上传文件
-     * 
-     * @return 所有文件列表
-     */
-    public java.util.List<UploadedFile> allFiles() {
-        if (app != null && app.file != null) {
-            return app.file.getAllFiles(this);
-        }
-        return new java.util.ArrayList<>(getFiles().values());
     }
     
     private void parseMultipartPart(String part, Map<String, UploadedFile> result) {
@@ -437,6 +426,25 @@ public class Context {
     // ==================== 响应方法 (Gin-style) ====================
     
     /**
+     * 内部方法：设置响应体，检测重复响应
+     */
+    void setResponseBody(byte[] body) {
+        if (responded && app != null && app.log != null) {
+            app.log.warn("Response already set for " + method + " " + path + ", overwriting previous response");
+        }
+        this.responseBody = body;
+        this.responded = true;
+    }
+    
+    /**
+     * 检查是否已设置响应
+     * @return true 表示已调用过响应方法
+     */
+    public boolean isResponded() {
+        return responded;
+    }
+    
+    /**
      * 设置 HTTP 状态码
      * @param code HTTP 状态码
      * @return this（支持链式调用）
@@ -463,7 +471,7 @@ public class Context {
      * @return this
      */
     public Context text(String content) {
-        this.responseBody = content.getBytes(charset);
+        setResponseBody(content.getBytes(charset));
         if (responseContentType == null && !responseHeaders.containsKey("Content-Type")) {
             this.responseHeaders.put("Content-Type", CT_TEXT);
         }
@@ -477,7 +485,7 @@ public class Context {
      * @return this
      */
     public Context data(byte[] content, String contentType) {
-        this.responseBody = content;
+        setResponseBody(content);
         this.responseHeaders.put("Content-Type", contentType);
         return this;
     }
@@ -503,7 +511,7 @@ public class Context {
      * @return this
      */
     public Context json(Object obj) {
-        this.responseBody = app.json.stringifyBytes(obj);
+        setResponseBody(app.json.stringifyBytes(obj));
         this.responseHeaders.put("Content-Type", CT_JSON);
         this.responseContentType = null;
         return this;
@@ -515,7 +523,7 @@ public class Context {
      * @return this
      */
     public Context html(String content) {
-        this.responseBody = content.getBytes(charset);
+        setResponseBody(content.getBytes(charset));
         this.responseHeaders.put("Content-Type", CT_HTML);
         this.responseContentType = null;
         return this;
@@ -547,7 +555,7 @@ public class Context {
      * 文件下载
      */
     public Context file(byte[] content, String filename) {
-        this.responseBody = content;
+        setResponseBody(content);
         this.responseContentType = "application/octet-stream";
         this.responseHeaders.put("Content-Disposition", "attachment; filename=\"" + filename + "\"");
         return this;
@@ -1214,5 +1222,6 @@ public class Context {
         responseContentType = null;
         requestBody = null;
         aborted = false;
+        responded = false;
     }
 }

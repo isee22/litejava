@@ -221,7 +221,7 @@ public class HotReloadPlugin extends Plugin {
             try {
                 watchService.close();
             } catch (Exception e) {
-                // ignore
+                // WatchService close failure is non-critical during shutdown
             }
         }
     }
@@ -260,7 +260,7 @@ public class HotReloadPlugin extends Plugin {
                 }
             }
         } catch (Exception e) {
-            // ignore
+            System.out.println("[HotReload] Failed to register directory: " + dir + " - " + e.getMessage());
         }
     }
     

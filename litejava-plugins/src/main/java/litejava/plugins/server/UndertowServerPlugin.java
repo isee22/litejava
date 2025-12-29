@@ -125,9 +125,9 @@ public class UndertowServerPlugin extends ServerPlugin {
             
             try {
                 parseRequest(ex, body, ctx);
-                app.handle(ctx);
+                app.handler.handle(ctx);
             } catch (Exception e) {
-                app.handleError(ctx, e);
+                app.exception.handleError(ctx, e);
             } finally {
                 sendResponse(ex, ctx);
                 releaseContext(ctx);

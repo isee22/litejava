@@ -50,7 +50,27 @@ public void config() {
 
 ## 代码风格
 
+- **不使用 private/protected** - 仿 Go 风格，所有字段和方法都用 public（或包级 default）
 - 使用 public 字段代替 getter/setter
 - 优先使用 `Map<String, Object>` 传递数据
 - 使用函数式接口和 Lambda
 - 框架异常继承 `LiteJavaException`
+
+```java
+// ✅ 正确 - Go 风格
+public class MyPlugin extends Plugin {
+    public int timeout = 30;
+    public String endpoint;
+    
+    public void doSomething() { ... }
+}
+
+// ❌ 错误 - Java 传统风格
+public class MyPlugin extends Plugin {
+    private int timeout = 30;
+    private String endpoint;
+    
+    public int getTimeout() { return timeout; }
+    public void setTimeout(int timeout) { this.timeout = timeout; }
+}
+```
