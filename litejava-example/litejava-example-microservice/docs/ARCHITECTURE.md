@@ -5,16 +5,16 @@
 ```
                                     ┌─────────────────┐
                                     │   Vue Frontend  │
-                                    │   (port 3000)   │
+                                    │   (可集群部署)   │
                                     └────────┬────────┘
                                              │
                                     ┌────────▼────────┐
-                                    │     Nginx       │
-                                    │  (反向代理)      │
+                                    │  Nginx 集群     │
+                                    │  (负载均衡)      │
                                     └────────┬────────┘
                                              │
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              API Gateway (8080)                              │
+│                         API Gateway 集群 (可水平扩展)                         │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
 │  │  Auth   │ │  CORS   │ │ Tracing │ │  Rate   │ │  Gray   │ │  Proxy  │   │
 │  │ Filter  │ │ Plugin  │ │ Plugin  │ │ Limiter │ │ Release │ │ Filter  │   │
@@ -25,19 +25,41 @@
               │                              │                              │
      ┌────────▼────────┐           ┌────────▼────────┐           ┌────────▼────────┐
      │  User Service   │           │ Product Service │           │  Order Service  │
-     │    (8081)       │           │    (8083)       │           │    (8082)       │
+     │    集群部署      │           │    集群部署      │           │    集群部署      │
+     │  (N 个实例)      │           │  (N 个实例)      │           │  (N 个实例)      │
      └────────┬────────┘           └────────┬────────┘           └────────┬────────┘
               │                              │                              │
               └──────────────────────────────┼──────────────────────────────┘
                                              │
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                            基础设施层                                        │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│  │ Consul  │ │  Redis  │ │RabbitMQ │ │ Zipkin  │ │   ELK   │ │  MySQL  │   │
-│  │ (8500)  │ │ (6379)  │ │ (5672)  │ │ (9411)  │ │ (5601)  │ │ (3306)  │   │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │
+│                            基础设施层 (均支持集群)                            │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐          │
+│  │ Consul   │ │  Redis   │ │ RabbitMQ │ │  Zipkin  │ │   ELK    │          │
+│  │ 集群模式  │ │ 主从/集群 │ │  集群     │ │  集群    │ │  集群    │          │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘          │
+│  ┌──────────┐ ┌──────────┐                                                  │
+│  │  MySQL   │ │  Nacos   │                                                  │
+│  │ 主从/读写 │ │  集群    │                                                  │
+│  │  分离    │ │ (可选)   │                                                  │
+│  └──────────┘ └──────────┘                                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## 集群能力一览
+
+| 组件 | 集群支持 | 扩展方式 | 说明 |
+|------|---------|---------|------|
+| **Gateway** | ✅ | `--scale gateway=N` | 无状态，可任意扩展 |
+| **User Service** | ✅ | `--scale user-service=N` | 无状态，可任意扩展 |
+| **Product Service** | ✅ | `--scale product-service=N` | 无状态，可任意扩展 |
+| **Order Service** | ✅ | `--scale order-service=N` | 无状态，可任意扩展 |
+| **Consul** | ✅ | 3/5 节点集群 | Raft 协议，强一致 |
+| **Redis** | ✅ | 主从/Sentinel/Cluster | 支持读写分离 |
+| **MySQL** | ✅ | 主从/MGR/读写分离 | 支持分库分表 |
+| **RabbitMQ** | ✅ | 镜像队列集群 | 高可用 |
+| **Elasticsearch** | ✅ | 多节点集群 | 分片+副本 |
+| **Zipkin** | ✅ | 多实例 + ES 存储 | 无状态 |
+| **Nginx** | ✅ | 多实例 + Keepalived | VIP 漂移 |
 
 ## 核心组件
 
@@ -194,12 +216,48 @@ Map<String, Object> result = rpc.call("product-service", "/product/stock/decreas
 
 ### 水平扩展
 
+所有业务服务都是无状态的，可以任意水平扩展：
+
 ```bash
 # Docker Compose 扩展
-docker-compose up -d --scale product-service=5
+docker-compose up -d --scale product-service=5 --scale user-service=3 --scale gateway=2
 
 # K8s 扩展
 kubectl scale deployment product-service --replicas=5 -n litejava
+
+# K8s 自动扩缩容 (HPA)
+kubectl autoscale deployment product-service --min=2 --max=10 --cpu-percent=70 -n litejava
+```
+
+### 基础设施集群配置
+
+**MySQL 读写分离**：
+```yaml
+database:
+  master:
+    url: jdbc:mysql://mysql-master:3306/litejava
+  slaves:
+    - url: jdbc:mysql://mysql-slave1:3306/litejava
+    - url: jdbc:mysql://mysql-slave2:3306/litejava
+  readWriteSplit: true
+```
+
+**Redis 集群**：
+```yaml
+redis:
+  mode: cluster  # standalone / sentinel / cluster
+  nodes:
+    - redis-node1:6379
+    - redis-node2:6379
+    - redis-node3:6379
+```
+
+**Consul 集群**：
+```bash
+# 3 节点集群
+consul agent -server -bootstrap-expect=3 -node=consul1 -bind=10.0.0.1
+consul agent -server -bootstrap-expect=3 -node=consul2 -bind=10.0.0.2 -join=10.0.0.1
+consul agent -server -bootstrap-expect=3 -node=consul3 -bind=10.0.0.3 -join=10.0.0.1
 ```
 
 ### 新增服务

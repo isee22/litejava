@@ -1,0 +1,139 @@
+# LiteJava 微服务 - 轻量版 Docker Compose
+# 
+# 特点：
+# - 业务服务共享宿主机 JDK，不打包 JDK 到镜像
+# - 镜像体积极小 (仅 Alpine + JAR)
+# - 适合开发环境和资源受限场景
+#
+# 前置条件：
+# - 宿主机安装 JDK 11+
+# - 设置环境变量 JAVA_HOME
+#
+# 使用方法：
+#   mvn clean package -DskipTests
+#   docker-compose -f docker-compose-lite.yml up -d
+
+version: '3.8'
+
+x-java-service: &java-service
+  image: alpine:3.18
+  volumes:
+    - ${JAVA_HOME}:/opt/java:ro
+  entrypoint: ["/opt/java/bin/java", "-jar", "/app/app.jar"]
+  networks:
+    - litejava-net
+
+services:
+  # ==================== 基础设施 ====================
+  
+  redis:
+    image: redis:7-alpine
+    container_name: litejava-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - litejava-net
+
+  consul:
+    image: consul:1.15
+    container_name: litejava-consul
+    ports:
+      - "8500:8500"
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+    networks:
+      - litejava-net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: litejava-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - litejava-net
+
+  zipkin:
+    image: openzipkin/zipkin:2.24
+    container_name: litejava-zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mem
+    networks:
+      - litejava-net
+
+  # ==================== 业务服务 (共享 JDK) ====================
+
+  user-service:
+    <<: *java-service
+    container_name: litejava-user
+    ports:
+      - "8081:8081"
+    volumes:
+      - ${JAVA_HOME}:/opt/java:ro
+      - ./user-service/target/user-service-1.0.0-jdk8-shaded.jar:/app/app.jar:ro
+      - ./user-service/docker-application.yml:/app/application.yml:ro
+    environment:
+      - SERVER_PORT=8081
+    depends_on:
+      - consul
+
+  product-service:
+    <<: *java-service
+    ports:
+      - "8083"
+    volumes:
+      - ${JAVA_HOME}:/opt/java:ro
+      - ./product-service/target/product-service-1.0.0-jdk8-shaded.jar:/app/app.jar:ro
+      - ./product-service/docker-application.yml:/app/application.yml:ro
+    environment:
+      - SERVER_PORT=8083
+    depends_on:
+      - consul
+
+  order-service:
+    <<: *java-service
+    container_name: litejava-order
+    ports:
+      - "8082:8082"
+    volumes:
+      - ${JAVA_HOME}:/opt/java:ro
+      - ./order-service/target/order-service-1.0.0-jdk8-shaded.jar:/app/app.jar:ro
+      - ./order-service/docker-application.yml:/app/application.yml:ro
+    environment:
+      - SERVER_PORT=8082
+    depends_on:
+      - consul
+      - redis
+
+  gateway:
+    <<: *java-service
+    container_name: litejava-gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${JAVA_HOME}:/opt/java:ro
+      - ./gateway/target/gateway-1.0.0-jdk8-shaded.jar:/app/app.jar:ro
+      - ./gateway/docker-application.yml:/app/application.yml:ro
+    environment:
+      - SERVER_PORT=8080
+    depends_on:
+      - consul
+      - user-service
+      - product-service
+      - order-service
+
+  # 前端 (Nginx，不需要 JDK)
+  frontend:
+    build: ./vue-frontend
+    container_name: litejava-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+    networks:
+      - litejava-net
+
+networks:
+  litejava-net:
+    driver: bridge
