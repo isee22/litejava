@@ -1,0 +1,54 @@
+server:
+  port: 8080
+
+consul:
+  host: localhost
+  port: 8500
+
+service:
+  name: gateway
+  host: host.docker.internal
+  port: 8080
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+jwt:
+  secret: your-256-bit-secret-key-here-min-32-chars
+
+publicPaths:
+  - /api/auth/login
+  - /api/auth/register
+  - /api/products
+  - /health
+  - /health/live
+  - /health/ready
+
+routes:
+  - prefix: /api/users
+    service: user-service
+    stripPrefix: true
+    rewritePrefix: /user
+  - prefix: /api/auth
+    service: auth-service
+    stripPrefix: true
+    rewritePrefix: /auth
+  - prefix: /api/products
+    service: product-service
+    stripPrefix: true
+    rewritePrefix: /product
+  - prefix: /api/orders
+    service: order-service
+    stripPrefix: true
+    rewritePrefix: /order
+  - prefix: /api/payments
+    service: payment-service
+    stripPrefix: true
+    rewritePrefix: /payment
+  - prefix: /api/notifications
+    service: notification-service
+    stripPrefix: true
+    rewritePrefix: /notification
+  - prefix: /api/search
+    service: search-service
+    stripPrefix: true
+    rewritePrefix: /search

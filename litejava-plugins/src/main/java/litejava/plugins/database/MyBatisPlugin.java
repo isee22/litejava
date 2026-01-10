@@ -153,4 +153,19 @@ public class MyBatisPlugin extends Plugin {
             }
         }
     }
+    
+    /**
+     * 获取 Mapper 实例（每次调用创建新 Session，适合简单查询）
+     * 
+     * <p>注意：返回的 Mapper 使用自动提交模式，适合单次操作。
+     * 如需事务，请使用 {@link #tx(Function)} 方法。
+     * 
+     * @param mapperClass Mapper 接口类
+     * @return Mapper 代理实例
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getMapper(Class<T> mapperClass) {
+        SqlSession session = sqlSessionFactory.openSession(true);
+        return session.getMapper(mapperClass);
+    }
 }

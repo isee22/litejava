@@ -1,0 +1,24 @@
+server:
+  port: 8080
+
+jwt:
+  secret: "litejava-microservice-jwt-secret-key-32"
+
+# 公开路径 (无需登录)
+publicPaths:
+  - /auth/login
+  - /auth/register
+  - /product/products
+  - /product/detail
+  - /product/list
+
+# K8s 路由配置 (可通过 ConfigMap 覆盖)
+gateway:
+  routes:
+    /product: http://product-service:8083
+    /user: http://user-service:8081
+    /order: http://order-service:8082
+    /auth: http://auth-service:8085
+    /payment: http://payment-service:8084
+    /notification: http://notification-service:8086
+    /search: http://search-service:8087

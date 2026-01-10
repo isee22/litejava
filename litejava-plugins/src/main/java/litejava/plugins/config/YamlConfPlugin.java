@@ -73,17 +73,35 @@ public class YamlConfPlugin extends ConfPlugin {
     @SuppressWarnings("unchecked")
     private Map<String, Object> loadYaml(String filename) {
         try {
-            // 先尝试从 classpath 加载
+            // 先尝试从文件系统加载（优先级更高，方便集群部署）
+            java.io.File file = new java.io.File(filename);
+            if (file.exists()) {
+                Map<String, Object> result = new Yaml().load(new FileInputStream(file));
+                return result != null ? result : Collections.emptyMap();
+            }
+            // 再尝试从 classpath 加载
             java.io.InputStream is = getClass().getClassLoader().getResourceAsStream(filename);
             if (is != null) {
                 Map<String, Object> result = new Yaml().load(is);
                 return result != null ? result : Collections.emptyMap();
             }
-            // 再尝试从文件系统加载
-            Map<String, Object> result = new Yaml().load(new FileInputStream(filename));
-            return result != null ? result : Collections.emptyMap();
+            return Collections.emptyMap();
         } catch (FileNotFoundException e) {
             return Collections.emptyMap();
+        }
+    }
+    
+    /**
+     * 从 YAML 字符串加载配置并合并到当前配置
+     * @param yamlContent YAML 内容
+     */
+    @SuppressWarnings("unchecked")
+    public void loadYamlContent(String yamlContent) {
+        if (yamlContent == null || yamlContent.isEmpty()) return;
+        
+        Map<String, Object> newData = new Yaml().load(yamlContent);
+        if (newData != null) {
+            merge(data, newData);
         }
     }
     

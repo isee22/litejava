@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>LiteJava 微服务测试</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; color: #333; margin-bottom: 20px; }
+        .services { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .card h3 { color: #1890ff; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .btn { background: #1890ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 5px 5px 5px 0; }
+        .btn:hover { background: #40a9ff; }
+        .btn.warning { background: #faad14; }
+        .result { background: #f6f6f6; padding: 10px; border-radius: 4px; margin-top: 10px; font-family: monospace; font-size: 12px; max-height: 250px; overflow: auto; white-space: pre-wrap; }
+        .login-section { background: #e6f7ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .login-section input { padding: 8px; margin-right: 10px; border: 1px solid #d9d9d9; border-radius: 4px; width: 150px; }
+        #token-display { font-size: 11px; word-break: break-all; margin-top: 10px; color: #666; }
+        .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .status.ok { background: #d4edda; color: #155724; }
+        .status.err { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 LiteJava 微服务测试面板</h1>
+        
+        <div class="login-section">
+            <h3>🔐 登录 (通过 Gateway: localhost:8080)</h3>
+            <input type="text" id="username" placeholder="用户名" value="zhangsan">
+            <input type="password" id="password" placeholder="密码" value="123456">
+            <button class="btn" onclick="login()">登录</button>
+            <button class="btn warning" onclick="clearToken()">清除 Token</button>
+            <div id="token-display"></div>
+        </div>
+
+        <div class="services">
+            <div class="card">
+                <h3>👤 用户服务 (8081)</h3>
+                <button class="btn" onclick="call('http://localhost:8080/api/users/list', {}, 'result-user')">用户列表 (via Gateway)</button>
+                <button class="btn" onclick="call('http://localhost:8081/user/list', {}, 'result-user')">用户列表 (直连)</button>
+                <div class="result" id="result-user"></div>
+            </div>
+
+            <div class="card">
+                <h3>🛒 商品服务 (8083)</h3>
+                <button class="btn" onclick="call('http://localhost:8080/api/products/list', {}, 'result-product')">商品列表 (via Gateway)</button>
+                <button class="btn" onclick="call('http://localhost:8083/product/list', {}, 'result-product')">商品列表 (直连)</button>
+                <div class="result" id="result-product"></div>
+            </div>
+
+            <div class="card">
+                <h3>📦 订单服务 (8082)</h3>
+                <button class="btn" onclick="call('http://localhost:8080/api/orders/list', {}, 'result-order')">订单列表 (via Gateway)</button>
+                <button class="btn" onclick="call('http://localhost:8082/order/list', {}, 'result-order')">订单列表 (直连)</button>
+                <div class="result" id="result-order"></div>
+            </div>
+
+            <div class="card">
+                <h3>💳 支付服务 (8084)</h3>
+                <button class="btn" onclick="call('http://localhost:8080/api/payments/list', {}, 'result-payment')">支付列表 (via Gateway)</button>
+                <button class="btn" onclick="call('http://localhost:8084/payment/list', {}, 'result-payment')">支付列表 (直连)</button>
+                <div class="result" id="result-payment"></div>
+            </div>
+
+            <div class="card">
+                <h3>🔑 认证服务 (8085)</h3>
+                <button class="btn" onclick="call('http://localhost:8085/auth/login', {username:'zhangsan',password:'123456'}, 'result-auth')">登录测试 (直连)</button>
+                <div class="result" id="result-auth"></div>
+            </div>
+
+            <div class="card">
+                <h3>📧 通知服务 (8086)</h3>
+                <button class="btn" onclick="call('http://localhost:8080/api/notifications/templates', {}, 'result-notification')">模板列表 (via Gateway)</button>
+                <button class="btn" onclick="call('http://localhost:8086/notification/templates', {}, 'result-notification')">模板列表 (直连)</button>
+                <div class="result" id="result-notification"></div>
+            </div>
+
+            <div class="card">
+                <h3>🔍 搜索服务 (8087)</h3>
+                <button class="btn" onclick="call('http://localhost:8080/api/search/hot', {}, 'result-search')">热门搜索 (via Gateway)</button>
+                <button class="btn" onclick="call('http://localhost:8087/search/hot', {}, 'result-search')">热门搜索 (直连)</button>
+                <div class="result" id="result-search"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token') || '';
+        updateTokenDisplay();
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            try {
+                const res = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    token = data.data.token;
+                    localStorage.setItem('token', token);
+                    updateTokenDisplay();
+                    alert('登录成功！');
+                } else {
+                    alert('登录失败: ' + data.msg);
+                }
+            } catch (e) {
+                alert('请求失败: ' + e.message);
+            }
+        }
+
+        function clearToken() {
+            token = '';
+            localStorage.removeItem('token');
+            updateTokenDisplay();
+        }
+
+        function updateTokenDisplay() {
+            const el = document.getElementById('token-display');
+            el.innerHTML = token 
+                ? '<span class="status ok">已登录</span> Token: ' + token.substring(0, 60) + '...' 
+                : '<span class="status err">未登录</span>';
+        }
+
+        async function call(url, body, resultId) {
+            const el = document.getElementById(resultId);
+            el.textContent = '请求中...';
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (token && url.includes('8080')) {
+                    headers['Authorization'] = 'Bearer ' + token;
+                }
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                el.textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                el.textContent = '错误: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+server:
+  port: 8080
+  name: gateway
+
+consul:
+  host: localhost
+  port: 8500
+
+# 链路追踪
+tracing:
+  enabled: true
+  endpoint: http://localhost:9411/api/v2/spans
+
+jwt:
+  secret: your-256-bit-secret-key-here-must-be-long-enough
+
+# 透明代理模式：自动从 Consul 发现服务路由
+discovery:
+  enabled: true
+
+# 不需要认证的路径
+publicPaths:
+  - /auth/login
+  - /auth/register
+  - /product
+  - /search
+  - /health

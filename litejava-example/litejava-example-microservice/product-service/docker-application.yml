@@ -1,0 +1,19 @@
+server:
+  port: 8083
+
+mybatis:
+  url: jdbc:mysql://host.docker.internal:3306/product_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  poolMaxSize: 10
+
+consul:
+  host: consul
+  port: 8500
+
+service:
+  name: product-service
+  host: auto
+  port: 8083
+  healthCheckPath: /health
+  healthCheckInterval: 10s

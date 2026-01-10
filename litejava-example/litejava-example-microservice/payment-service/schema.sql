@@ -1,0 +1,32 @@
+CREATE DATABASE IF NOT EXISTS payment_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE payment_db;
+
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    payment_no VARCHAR(64) NOT NULL UNIQUE,
+    order_no VARCHAR(32) NOT NULL,
+    user_id BIGINT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    channel VARCHAR(20) NOT NULL COMMENT 'alipay/wechat/bank',
+    status TINYINT DEFAULT 0 COMMENT '0:待支付 1:支付中 2:成功 3:失败 4:已退款',
+    paid_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS refunds (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    refund_no VARCHAR(64) NOT NULL UNIQUE,
+    payment_no VARCHAR(64) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    reason VARCHAR(500),
+    status TINYINT DEFAULT 0 COMMENT '0:待处理 1:处理中 2:成功 3:失败',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (payment_no) REFERENCES payments(payment_no)
+);
+
+INSERT INTO payments (payment_no, order_no, user_id, amount, channel, status, paid_at) VALUES 
+('PAY20240101001', 'ORD20240101001', 1, 999.00, 'alipay', 2, '2024-01-01 10:30:00'),
+('PAY20240101002', 'ORD20240101002', 2, 1999.00, 'wechat', 2, '2024-01-01 11:00:00');

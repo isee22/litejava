@@ -1,0 +1,33 @@
+server:
+  port: 8082
+  name: order-service
+
+service:
+  name: order-service
+  host: localhost
+  port: 8082
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+mybatis:
+  url: jdbc:mysql://localhost:3306/order_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  poolMaxSize: 10
+
+consul:
+  host: localhost
+  port: 8500
+
+redis:
+  host: localhost
+  port: 6379
+
+tracing:
+  enabled: true
+  endpoint: http://localhost:9411/api/v2/spans
+
+seata:
+  enabled: true
+  serverAddr: localhost:8091
+  txServiceGroup: default_tx_group

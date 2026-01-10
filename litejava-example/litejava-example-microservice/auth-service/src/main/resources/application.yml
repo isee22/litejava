@@ -1,0 +1,23 @@
+server:
+  port: 8085
+
+mybatis:
+  url: jdbc:mysql://localhost:3306/auth_db?useSSL=false&serverTimezone=UTC
+  username: root
+  password: 123456
+  poolMaxSize: 10
+
+consul:
+  host: localhost
+  port: 8500
+
+service:
+  name: auth-service
+  host: host.docker.internal
+  port: 8085
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+jwt:
+  secret: your-256-bit-secret-key-here-min-32-chars
+  expireHours: 24

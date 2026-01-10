@@ -232,4 +232,55 @@ public class ConfPlugin extends Plugin {
         if (val != null) return Boolean.parseBoolean(String.valueOf(val));
         return defaultValue;
     }
+    
+    /**
+     * 获取浮点数配置
+     */
+    public double getDouble(String section, String key, double defaultValue) {
+        Object val = get(section).get(key);
+        if (val instanceof Number) return ((Number) val).doubleValue();
+        if (val != null) {
+            try { return Double.parseDouble(String.valueOf(val)); } catch (Exception e) {}
+        }
+        return defaultValue;
+    }
+    
+    /**
+     * 设置配置值
+     * @param key 配置键 (支持 section.key 格式)
+     * @param value 配置值
+     */
+    @SuppressWarnings("unchecked")
+    public void set(String key, Object value) {
+        int dot = key.indexOf('.');
+        if (dot > 0) {
+            String section = key.substring(0, dot);
+            String subKey = key.substring(dot + 1);
+            
+            Map<String, Object> sectionMap = (Map<String, Object>) data.get(section);
+            if (sectionMap == null) {
+                sectionMap = new LinkedHashMap<>();
+                data.put(section, sectionMap);
+            }
+            sectionMap.put(subKey, value);
+        } else {
+            data.put(key, value);
+        }
+    }
+    
+    /**
+     * 设置配置值
+     * @param section section 名称
+     * @param key 配置键
+     * @param value 配置值
+     */
+    @SuppressWarnings("unchecked")
+    public void set(String section, String key, Object value) {
+        Map<String, Object> sectionMap = (Map<String, Object>) data.get(section);
+        if (sectionMap == null) {
+            sectionMap = new LinkedHashMap<>();
+            data.put(section, sectionMap);
+        }
+        sectionMap.put(key, value);
+    }
 }

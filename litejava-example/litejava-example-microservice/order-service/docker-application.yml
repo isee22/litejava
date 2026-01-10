@@ -1,0 +1,29 @@
+server:
+  port: 8082
+
+mybatis:
+  url: jdbc:mysql://host.docker.internal:3306/order_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  poolMaxSize: 10
+
+redis:
+  host: redis
+  port: 6379
+
+mq:
+  host: rabbitmq
+  port: 5672
+  username: guest
+  password: guest
+
+consul:
+  host: consul
+  port: 8500
+
+service:
+  name: order-service
+  host: auto
+  port: 8082
+  healthCheckPath: /health
+  healthCheckInterval: 10s

@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+consul:
+  host: consul
+  port: 8500
+
+jwt:
+  secret: litejava-jwt-secret-key-32chars!
+
+# 透明代理模式：自动从 Consul 发现服务路由
+# product-service → /product/*
+# user-service → /user/*
+# order-service → /order/*
+discovery:
+  enabled: true
+
+# 不需要认证的路径
+publicPaths:
+  - /auth/login
+  - /auth/register
+  - /user/register
+  - /product
+  - /search
+  - /health
+
+service:
+  name: gateway
+  host: auto
+  port: 8080
+  healthCheckPath: /health
+  healthCheckInterval: 10s

@@ -1,0 +1,33 @@
+server:
+  port: 8086
+
+service:
+  name: notification-service
+  host: host.docker.internal
+  port: 8086
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+consul:
+  host: localhost
+  port: 8500
+
+database:
+  url: jdbc:mysql://localhost:3306/notification_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  pool:
+    maxSize: 10
+
+# 邮件配置（示例）
+mail:
+  host: smtp.example.com
+  port: 587
+  username: noreply@example.com
+  password: your-password
+
+# 短信配置（示例）
+sms:
+  provider: aliyun
+  accessKey: your-access-key
+  secretKey: your-secret-key

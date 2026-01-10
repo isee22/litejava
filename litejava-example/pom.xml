@@ -20,5 +20,6 @@
         <module>litejava-example-jdbc</module>
         <module>litejava-example-jpa</module>
         <module>litejava-example-mybatis</module>
+        <module>litejava-example-microservice</module>
     </modules>
 </project>

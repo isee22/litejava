@@ -1,0 +1,284 @@
+# LiteJava 微服务 Docker Compose 配置
+# 
+# 只管理基础设施，业务服务用本机 Java 启动
+# MySQL 使用本机安装的
+# 
+# 使用方法：
+#   docker-compose up -d          # 启动基础设施
+#   docker-compose down           # 停止所有服务
+
+version: '3.8'
+
+services:
+  # Redis 缓存/分布式锁
+  redis:
+    image: redis:7-alpine
+    container_name: litejava-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - litejava-net
+
+  # Consul 服务注册发现
+  consul:
+    image: consul:1.15
+    container_name: litejava-consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+    volumes:
+      - consul-data:/consul/data
+    networks:
+      - litejava-net
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: litejava-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - litejava-net
+
+  # Nacos 服务发现 + 配置中心
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: litejava-nacos
+    environment:
+      - MODE=standalone
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    networks:
+      - litejava-net
+
+  # Zipkin 链路追踪
+  zipkin:
+    image: openzipkin/zipkin:2.24
+    container_name: litejava-zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mem
+    networks:
+      - litejava-net
+
+  # Seata 分布式事务协调器
+  seata:
+    image: seataio/seata-server:1.7.0
+    container_name: litejava-seata
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    environment:
+      - SEATA_PORT=8091
+      - STORE_MODE=file
+    networks:
+      - litejava-net
+
+  # Elasticsearch 日志/搜索
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: litejava-elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - litejava-net
+
+  # Kibana 日志可视化
+  kibana:
+    image: kibana:8.11.0
+    container_name: litejava-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - litejava-net
+
+  # ==================== 业务服务 ====================
+
+  # 用户服务 (支持水平扩展)
+  user-service:
+    build: ./user-service
+    ports:
+      - "8081"
+    environment:
+      - SERVER_PORT=8081
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+    networks:
+      - litejava-net
+
+  # 认证服务
+  auth-service:
+    build: ./auth-service
+    container_name: litejava-auth
+    ports:
+      - "8085:8085"
+    environment:
+      - SERVER_PORT=8085
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - JWT_SECRET=litejava-jwt-secret-key-32chars!
+    depends_on:
+      - consul
+    networks:
+      - litejava-net
+
+  # 商品服务 (支持水平扩展)
+  product-service:
+    build: ./product-service
+    ports:
+      - "8083"  # 动态端口映射，支持多实例
+    environment:
+      - SERVER_PORT=8083
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+    networks:
+      - litejava-net
+
+  # 订单服务 (支持水平扩展)
+  order-service:
+    build: ./order-service
+    ports:
+      - "8082"
+    environment:
+      - SERVER_PORT=8082
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+      - redis
+      - rabbitmq
+    networks:
+      - litejava-net
+
+  # 支付服务
+  payment-service:
+    build: ./payment-service
+    container_name: litejava-payment
+    ports:
+      - "8084:8084"
+    environment:
+      - SERVER_PORT=8084
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+      - redis
+      - rabbitmq
+    networks:
+      - litejava-net
+
+  # 通知服务
+  notification-service:
+    build: ./notification-service
+    container_name: litejava-notification
+    ports:
+      - "8086:8086"
+    environment:
+      - SERVER_PORT=8086
+      - MYSQL_HOST=host.docker.internal
+      - MYSQL_PORT=3306
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+      - rabbitmq
+    networks:
+      - litejava-net
+
+  # 搜索服务
+  search-service:
+    build: ./search-service
+    container_name: litejava-search
+    ports:
+      - "8087:8087"
+    environment:
+      - SERVER_PORT=8087
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+    depends_on:
+      - consul
+    networks:
+      - litejava-net
+
+  # API 网关
+  gateway:
+    build: ./gateway
+    container_name: litejava-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - CONSUL_HOST=consul
+      - CONSUL_PORT=8500
+      - JWT_SECRET=litejava-jwt-secret-key-32chars!
+    depends_on:
+      - consul
+    networks:
+      - litejava-net
+
+  # Vue 前端 (Nginx)
+  frontend:
+    build: ./vue-frontend
+    container_name: litejava-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+    networks:
+      - litejava-net
+
+networks:
+  litejava-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+  consul-data:
+  rabbitmq-data:
+  es-data:

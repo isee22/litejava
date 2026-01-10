@@ -3,6 +3,7 @@ package litejava.plugins.http;
 import litejava.Context;
 import litejava.MiddlewarePlugin;
 import litejava.Next;
+import litejava.exception.LiteJavaException;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -84,12 +85,21 @@ public class RecoveryPlugin extends MiddlewarePlugin {
         // 自动检测 devMode
         boolean devMode = ctx.app != null && ctx.app.devMode;
         
-        // 默认处理
-        ctx.status(500);
+        // 业务异常 vs 系统异常
+        int code = 500;
+        String msg = e.getMessage() != null ? e.getMessage() : "Internal Server Error";
+        
+        if (e instanceof LiteJavaException) {
+            LiteJavaException le = (LiteJavaException) e;
+            ctx.status(le.statusCode);
+            code = le.code;
+        } else {
+            ctx.status(500);
+        }
         
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("code", 500);
-        response.put("msg", e.getMessage() != null ? e.getMessage() : "Internal Server Error");
+        response.put("code", code);
+        response.put("msg", msg);
         response.put("data", null);
         
         if (showStack || devMode) {
@@ -101,11 +111,15 @@ public class RecoveryPlugin extends MiddlewarePlugin {
         
         ctx.json(response);
         
-        // 打印到控制台
+        // 打印到控制台 (业务异常用 warn，系统异常用 error)
         if (ctx.app != null && ctx.app.log != null) {
-            ctx.app.log.error("Recovery caught exception: " + e.getMessage());
-            if (showStack || devMode) {
-                e.printStackTrace();
+            if (code >= 500 || code < 100) {
+                ctx.app.log.error("Recovery caught exception: " + e.getMessage());
+                if (showStack || devMode) {
+                    e.printStackTrace();
+                }
+            } else {
+                ctx.app.log.warn("Business exception: [" + code + "] " + msg);
             }
         }
     }

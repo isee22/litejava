@@ -1,0 +1,18 @@
+server:
+  port: 8087
+
+service:
+  name: search-service
+  host: host.docker.internal
+  port: 8087
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+consul:
+  host: localhost
+  port: 8500
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http

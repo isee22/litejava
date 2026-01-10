@@ -1,0 +1,25 @@
+server:
+  port: 8086
+
+mybatis:
+  url: jdbc:mysql://host.docker.internal:3306/notification_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  poolMaxSize: 10
+
+mq:
+  host: rabbitmq
+  port: 5672
+  username: guest
+  password: guest
+
+consul:
+  host: consul
+  port: 8500
+
+service:
+  name: notification-service
+  host: host.docker.internal
+  port: 8086
+  healthCheckPath: /health
+  healthCheckInterval: 10s

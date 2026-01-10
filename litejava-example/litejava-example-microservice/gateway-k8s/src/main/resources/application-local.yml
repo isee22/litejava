@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+jwt:
+  secret: "litejava-microservice-jwt-secret-key-32"
+
+publicPaths:
+  - /auth/login
+  - /auth/register
+  - /product/products
+  - /product/detail
+
+# 本地测试用 localhost (Docker 端口映射)
+gateway:
+  routes:
+    /product: http://localhost:63357
+    /user: http://localhost:63545
+    /order: http://localhost:63546

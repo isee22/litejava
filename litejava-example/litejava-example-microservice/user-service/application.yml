@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+service:
+  name: user-service
+  host: localhost
+  port: 8081
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+consul:
+  host: localhost
+  port: 8500
+
+database:
+  url: jdbc:mysql://localhost:3306/user_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  pool:
+    maxSize: 10
+
+log:
+  level: INFO

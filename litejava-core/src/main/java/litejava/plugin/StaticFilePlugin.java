@@ -43,10 +43,10 @@ public class StaticFilePlugin extends Plugin {
     
     private static final Map<String, String> MIME_TYPES = new HashMap<>();
     static {
-        MIME_TYPES.put("html", "text/html");
-        MIME_TYPES.put("htm", "text/html");
-        MIME_TYPES.put("css", "text/css");
-        MIME_TYPES.put("js", "application/javascript");
+        MIME_TYPES.put("html", "text/html; charset=utf-8");
+        MIME_TYPES.put("htm", "text/html; charset=utf-8");
+        MIME_TYPES.put("css", "text/css; charset=utf-8");
+        MIME_TYPES.put("js", "application/javascript; charset=utf-8");
         MIME_TYPES.put("json", "application/json");
         MIME_TYPES.put("xml", "application/xml");
         MIME_TYPES.put("txt", "text/plain");

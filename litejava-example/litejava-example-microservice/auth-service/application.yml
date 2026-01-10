@@ -1,0 +1,24 @@
+server:
+  port: 8085
+
+service:
+  name: auth-service
+  host: host.docker.internal
+  port: 8085
+  healthCheckPath: /health
+  healthCheckInterval: 10s
+
+consul:
+  host: localhost
+  port: 8500
+
+database:
+  url: jdbc:mysql://localhost:3306/auth_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+  username: root
+  password: 123456
+  pool:
+    maxSize: 10
+
+jwt:
+  secret: your-256-bit-secret-key-here-must-be-long-enough
+  expireHours: 24
