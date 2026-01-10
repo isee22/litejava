@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>litejava</groupId>
+        <artifactId>litejava-example</artifactId>
+        <version>1.0.0-jdk8</version>
+    </parent>
+
+    <artifactId>litejava-example-game</artifactId>
+    <packaging>pom</packaging>
+    <name>LiteJava Game Examples</name>
+    <description>游戏服务器示例 - 房间制 + MMORPG</description>
+
+    <modules>
+        <module>game-common</module>
+        <module>room-game</module>
+        <module>mmorpg-game</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>4.1.100.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>3.24.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
