@@ -109,3 +109,23 @@ ctx.ok(created);
 List<User> users = UserService.findAll();
 ctx.ok(ListResult.of(users));
 ```
+
+## room-game 架构 (BabyKylin 模式)
+
+采用 HTTP + WebSocket 分离架构：
+- 进入游戏前：全部用 HTTP (登录/匹配/房间操作)
+- 进入游戏后：用 WebSocket (游戏操作)
+
+生产环境用 Nginx 做反向代理，隐藏内部服务 IP。
+
+### CMD 定义 (仅用于 WebSocket 游戏通信)
+
+| 范围 | 说明 |
+|------|------|
+| 1-99 | 系统 (LOGIN, PING 等) |
+| 100-499 | 房间/聊天 |
+| 500-999 | 游戏通用 |
+| 1000+ | 各游戏自定义 |
+
+新增 CMD 时在 `room-game-common/Cmd.java` 定义常量。
+

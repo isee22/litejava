@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>litejava</groupId>
+        <artifactId>room-game</artifactId>
+        <version>1.0.0-jdk8</version>
+    </parent>
+
+    <artifactId>room-game-common</artifactId>
+    <name>Room Game Common</name>
+    <description>公共模块 - 协议定义、Redis 工具</description>
+    
+    <dependencies>
+        <!-- 依赖 litejava-plugins 获取 RedisCachePlugin -->
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>litejava-plugins</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Jedis (litejava-plugins 中是 optional) -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+    </dependencies>
+</project>

@@ -87,4 +87,18 @@ public class JsonPlugin extends Plugin {
     public Map<String, Object> parseMap(String json) {
         throw new UnsupportedOperationException("No JsonPlugin implementation");
     }
+    
+    /**
+     * 将对象转换为指定类型（不走 JSON 字符串）
+     * <p>用于将 Map/List 等动态类型转换为 VO 对象
+     * 
+     * @param obj 源对象（通常是 Map 或 List）
+     * @param clazz 目标类型
+     * @return 转换后的对象
+     */
+    public <T> T convert(Object obj, Class<T> clazz) {
+        // 默认实现：走 stringify + parse（子类可覆盖提供更高效实现）
+        String json = stringify(obj);
+        return parse(json, clazz);
+    }
 }

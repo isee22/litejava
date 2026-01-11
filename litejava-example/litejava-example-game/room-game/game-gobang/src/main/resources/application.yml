@@ -1,0 +1,12 @@
+server:
+  id: gobang-1
+  wsPort: 9200
+  httpPort: 9201
+  advertiseHost: localhost
+
+game:
+  type: gobang
+  maxPlayers: 2
+
+hall:
+  url: http://localhost:8201

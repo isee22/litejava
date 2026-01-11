@@ -1,0 +1,7 @@
+server:
+  id: hall-1
+  httpPort: 8201
+
+# AccountServer 地址 (用于获取房间配置)
+account:
+  url: http://localhost:8101

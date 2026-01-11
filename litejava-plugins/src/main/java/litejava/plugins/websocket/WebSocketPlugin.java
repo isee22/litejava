@@ -135,24 +135,40 @@ public class WebSocketPlugin extends Plugin {
             InputStream in = client.getInputStream();
             OutputStream out = client.getOutputStream();
             
-            // 解析握手请求
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-            String line;
+            // 解析握手请求 (逐字节读取，避免 BufferedReader 读取过多数据)
             String key = null;
             String requestPath = null;
             Map<String, String> headers = new HashMap<>();
             
-            // 读取请求行
-            String requestLine = reader.readLine();
-            if (requestLine != null && requestLine.startsWith("GET ")) {
-                String[] parts = requestLine.split(" ");
+            // 读取 HTTP 头 (逐字节读取直到遇到 \r\n\r\n)
+            ByteArrayOutputStream headerBuf = new ByteArrayOutputStream();
+            int prev = 0, curr;
+            int crlfCount = 0;
+            while ((curr = in.read()) != -1) {
+                headerBuf.write(curr);
+                if (prev == '\r' && curr == '\n') {
+                    crlfCount++;
+                    if (crlfCount == 2) break; // 双 CRLF 表示头结束
+                } else if (curr != '\r') {
+                    crlfCount = 0;
+                }
+                prev = curr;
+            }
+            
+            String headerStr = headerBuf.toString("UTF-8");
+            String[] lines = headerStr.split("\r\n");
+            
+            // 解析请求行
+            if (lines.length > 0 && lines[0].startsWith("GET ")) {
+                String[] parts = lines[0].split(" ");
                 if (parts.length >= 2) {
                     requestPath = parts[1].split("\\?")[0];
                 }
             }
             
-            // 读取请求头
-            while ((line = reader.readLine()) != null && !line.isEmpty()) {
+            // 解析请求头
+            for (int i = 1; i < lines.length; i++) {
+                String line = lines[i];
                 int idx = line.indexOf(':');
                 if (idx > 0) {
                     String name = line.substring(0, idx).trim();
@@ -209,7 +225,9 @@ public class WebSocketPlugin extends Plugin {
             // 消息循环
             while (!client.isClosed() && session.isOpen) {
                 WsFrame frame = readFrame(in);
-                if (frame == null) break;
+                if (frame == null) {
+                    break;
+                }
                 
                 switch (frame.opcode) {
                     case WsFrame.OPCODE_TEXT:
@@ -262,13 +280,17 @@ public class WebSocketPlugin extends Plugin {
     
     private WsFrame readFrame(InputStream in) throws IOException {
         int b1 = in.read();
-        if (b1 == -1) return null;
+        if (b1 == -1) {
+            return null;
+        }
         
         boolean fin = (b1 & 0x80) != 0;
         int opcode = b1 & 0x0F;
         
         int b2 = in.read();
-        if (b2 == -1) return null;
+        if (b2 == -1) {
+            return null;
+        }
         
         boolean masked = (b2 & 0x80) != 0;
         long len = b2 & 0x7F;

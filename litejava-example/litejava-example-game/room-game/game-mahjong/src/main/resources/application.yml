@@ -1,0 +1,12 @@
+server:
+  id: mahjong-1
+  wsPort: 9300
+  httpPort: 9301
+  advertiseHost: localhost
+
+game:
+  type: mahjong
+  maxPlayers: 4
+
+hall:
+  url: http://localhost:8201

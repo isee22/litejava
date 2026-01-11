@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>litejava</groupId>
+        <artifactId>room-game</artifactId>
+        <version>1.0.0-jdk8</version>
+    </parent>
+    
+    <artifactId>account-server</artifactId>
+    <packaging>jar</packaging>
+    <name>Account Server</name>
+    <description>账号服务器 - 登录/玩家数据/好友/排行榜/商城 (独立服务)</description>
+    
+    <dependencies>
+        <!-- 只依赖 litejava-plugins，不依赖 room-game-common -->
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>litejava-plugins</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- MyBatis -->
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>3.5.13</version>
+        </dependency>
+        
+        <!-- HikariCP -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>4.0.3</version>
+        </dependency>
+        
+        <!-- MySQL -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+            <scope>runtime</scope>
+        </dependency>
+        
+        <!-- Redis 连接池 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+            <version>2.11.1</version>
+        </dependency>
+    </dependencies>
+</project>

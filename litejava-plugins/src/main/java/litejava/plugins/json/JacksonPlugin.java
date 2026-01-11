@@ -82,4 +82,12 @@ public class JacksonPlugin extends JsonPlugin {
             throw new RuntimeException("JSON parse failed", e);
         }
     }
+    
+    /**
+     * 将对象转换为指定类型（不走 JSON 字符串，直接内存转换）
+     */
+    @Override
+    public <T> T convert(Object obj, Class<T> clazz) {
+        return mapper.convertValue(obj, clazz);
+    }
 }

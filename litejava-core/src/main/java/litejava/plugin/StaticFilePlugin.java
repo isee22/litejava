@@ -153,9 +153,8 @@ public class StaticFilePlugin extends Plugin {
         String mimeType = MIME_TYPES.getOrDefault(ext, "application/octet-stream");
         
         ctx.status(200)
-           .header("Content-Type", mimeType)
            .header("Cache-Control", "public, max-age=" + cacheMaxAge)
-           .data(content);
+           .data(content, mimeType);
     }
     
     private byte[] readFromFileSystem(String relativePath) {

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>litejava</groupId>
+        <artifactId>room-game</artifactId>
+        <version>1.0.0-jdk8</version>
+    </parent>
+    
+    <artifactId>robot-client</artifactId>
+    <name>Robot Client</name>
+    <description>游戏机器人 - 模拟玩家陪玩</description>
+    
+    <dependencies>
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>room-game-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>litejava-plugins</artifactId>
+        </dependency>
+        <!-- 游戏模块 (复用 CMD 常量) -->
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>game-doudizhu</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>game-gobang</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>game-mahjong</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>game-niuniu</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>game-texas</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- OkHttp WebSocket 客户端 -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+    </dependencies>
+</project>

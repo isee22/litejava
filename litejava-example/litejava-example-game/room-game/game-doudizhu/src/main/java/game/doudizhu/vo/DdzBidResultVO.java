@@ -1,0 +1,14 @@
+package game.doudizhu.vo;
+
+import java.util.List;
+
+/**
+ * 叫地主结果
+ */
+public class DdzBidResultVO {
+    public int seatIndex;
+    public boolean bid;
+    public int nextSeat;
+    public int landlordSeat = -1;
+    public List<Integer> bottomCards;
+}
