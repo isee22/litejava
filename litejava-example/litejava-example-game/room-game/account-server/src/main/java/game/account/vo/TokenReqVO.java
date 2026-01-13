@@ -6,3 +6,4 @@ package game.account.vo;
 public class TokenReqVO {
     public String token;
 }
+

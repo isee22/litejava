@@ -1,20 +1,26 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+/**
+ * 开发模式：Vite 代理到各服务端口（无需 Nginx）
+ * 生产模式：通过 Nginx 统一入口
+ */
 export default defineConfig({
   plugins: [vue()],
   server: {
     port: 3000,
     proxy: {
-      // 所有 API 和 WebSocket 都走 Nginx
-      '/api': {
-        target: 'http://localhost:80',
-        changeOrigin: true
+      // Account Server
+      '/api/account': {
+        target: 'http://localhost:8101',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/account/, '')
       },
-      '/ws': {
-        target: 'ws://localhost:80',
-        ws: true,
-        changeOrigin: true
+      // Hall Server
+      '/api/hall': {
+        target: 'http://localhost:8201',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/hall/, '')
       }
     }
   }

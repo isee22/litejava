@@ -71,6 +71,26 @@ public abstract class CachePlugin extends Plugin {
     
     public abstract boolean exists(String key);
     
+    /** 自增计数器 */
+    public abstract long incr(String key);
+    
+    // ==================== List 操作 (队列) ====================
+    
+    /** 从右边添加元素 */
+    public abstract void rpush(String key, String value);
+    
+    /** 从左边添加元素 */
+    public abstract void lpush(String key, String value);
+    
+    /** 从左边弹出元素 */
+    public abstract String lpop(String key);
+    
+    /** 获取列表长度 */
+    public abstract long llen(String key);
+    
+    /** 移除列表中的元素 */
+    public abstract void lrem(String key, String value);
+    
     // ==================== 获取或加载 ====================
     
     /** 获取或加载 */

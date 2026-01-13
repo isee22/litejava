@@ -1,7 +1,12 @@
 server:
   id: hall-1
   httpPort: 8201
+  roomPriKey: ROOM_PRI_KEY_2024
+  accountPriKey: ACCOUNT_PRI_KEY_2024
 
-# AccountServer 地址 (用于获取房间配置)
-account:
-  url: http://localhost:8101
+# Redis 配置 (集群模式)
+# 不配置则使用内存缓存 (单机模式)
+redis:
+  host: localhost
+  port: 6379
+  password:

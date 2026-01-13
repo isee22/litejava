@@ -1,0 +1,13 @@
+server:
+  id: mahjong2-go-1
+  wsPort: 9600
+  httpPort: 9601
+  clientip: localhost
+
+game:
+  type: mahjong2
+  maxPlayers: 2
+
+hall:
+  url: http://localhost:8201
+  priKey: ROOM_PRI_KEY_2024

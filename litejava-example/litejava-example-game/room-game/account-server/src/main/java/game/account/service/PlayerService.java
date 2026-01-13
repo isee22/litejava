@@ -1,32 +1,33 @@
 package game.account.service;
 
-import game.account.DB;
-import game.account.entity.PlayerEntity;
-import game.account.mapper.PlayerMapper;
+import game.account.dao.PlayerDao;
+import game.account.entity.Player;
 
-import java.util.*;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 玩家服务
  */
 public class PlayerService {
-    
-    /**
-     * 获取玩家，不存在则创建
-     */
-    public static PlayerEntity getOrCreate(long userId, String name) {
-        PlayerEntity player = DB.execute(PlayerMapper.class, m -> m.findById(userId));
-        if (player != null) {
-            return player;
-        }
-        
-        // 创建新玩家
-        player = new PlayerEntity();
+
+    private final PlayerDao playerDao = new PlayerDao();
+
+    public Player get(long userId) {
+        return playerDao.findById(userId);
+    }
+
+    public Player getOrCreate(long userId, String name) {
+        Player player = playerDao.findById(userId);
+        if (player != null) return player;
+
+        player = new Player();
         player.userId = userId;
         player.name = name;
-        player.sex = 0;       // 未知
-        player.coins = 10000;  // 初始金币
-        player.diamonds = 100; // 初始钻石
+        player.sex = 0;
+        player.coins = 10000;
+        player.diamonds = 100;
         player.level = 1;
         player.exp = 0;
         player.vipLevel = 0;
@@ -36,130 +37,118 @@ public class PlayerService {
         player.loginDays = 1;
         player.totalGames = 0;
         player.winGames = 0;
-        
-        PlayerEntity finalPlayer = player;
-        DB.execute(PlayerMapper.class, m -> {
-            m.insert(finalPlayer);
-            return null;
-        });
-        
+        player.escapeGames = 0;
+        player.creditScore = 100;  // 初始信用分
+
+        playerDao.insert(player);
         return player;
     }
-    
-    /**
-     * 获取玩家
-     */
-    public static PlayerEntity get(long userId) {
-        return DB.execute(PlayerMapper.class, m -> m.findById(userId));
-    }
-    
-    /**
-     * 更新登录信息
-     */
-    public static void updateLogin(long userId) {
-        PlayerEntity player = get(userId);
+
+    public void updateLogin(long userId) {
+        Player player = playerDao.findById(userId);
         if (player == null) return;
-        
+
         long now = System.currentTimeMillis();
-        long lastLogin = player.lastLoginTime;
-        
-        // 判断是否新的一天
-        boolean isNewDay = !isSameDay(lastLogin, now);
-        if (isNewDay) {
+        if (!isSameDay(player.lastLoginTime, now)) {
             player.loginDays++;
         }
-        
         player.lastLoginTime = now;
-        DB.execute(PlayerMapper.class, m -> {
-            m.update(player);
-            return null;
-        });
+        playerDao.update(player);
     }
-    
-    /**
-     * 增加金币
-     */
-    public static boolean addCoins(long userId, int amount, String reason) {
-        PlayerEntity player = get(userId);
+
+    public boolean addCoins(long userId, int amount, String reason) {
+        Player player = playerDao.findById(userId);
         if (player == null) return false;
-        
-        player.coins += amount;
-        if (player.coins < 0) player.coins = 0;
-        
-        DB.execute(PlayerMapper.class, m -> {
-            m.update(player);
-            return null;
-        });
+
+        player.coins = Math.max(0, player.coins + amount);
+        playerDao.update(player);
         return true;
     }
-    
-    /**
-     * 增加钻石
-     */
-    public static boolean addDiamonds(long userId, int amount, String reason) {
-        PlayerEntity player = get(userId);
+
+    public boolean addDiamonds(long userId, int amount, String reason) {
+        Player player = playerDao.findById(userId);
         if (player == null) return false;
-        
-        player.diamonds += amount;
-        if (player.diamonds < 0) player.diamonds = 0;
-        
-        DB.execute(PlayerMapper.class, m -> {
-            m.update(player);
-            return null;
-        });
+
+        player.diamonds = Math.max(0, player.diamonds + amount);
+        playerDao.update(player);
         return true;
     }
-    
-    /**
-     * 增加经验
-     */
-    public static void addExp(long userId, int exp) {
-        PlayerEntity player = get(userId);
+
+    public void addExp(long userId, int exp) {
+        Player player = playerDao.findById(userId);
         if (player == null) return;
-        
+
         player.exp += exp;
-        
-        // 升级检查
         while (player.exp >= getExpForLevel(player.level + 1)) {
             player.exp -= getExpForLevel(player.level + 1);
             player.level++;
         }
-        
-        DB.execute(PlayerMapper.class, m -> {
-            m.update(player);
-            return null;
-        });
+        playerDao.update(player);
     }
-    
-    /**
-     * 记录游戏结果
-     */
-    public static void recordGame(long userId, boolean win) {
-        PlayerEntity player = get(userId);
+
+    public void recordGame(long userId, boolean win) {
+        Player player = playerDao.findById(userId);
         if (player == null) return;
-        
+
         player.totalGames++;
         if (win) player.winGames++;
-        
-        DB.execute(PlayerMapper.class, m -> {
-            m.update(player);
-            return null;
-        });
+        playerDao.update(player);
     }
     
     /**
-     * 获取升级所需经验
+     * 批量结算 (GameServer 调用)
+     * 
+     * @param settlements 结算列表 [{userId, win, score, coinChange}]
      */
-    public static int getExpForLevel(int level) {
-        return level * 100;
+    public void batchSettle(List<Map<String, Object>> settlements) {
+        for (Map<String, Object> s : settlements) {
+            long userId = ((Number) s.get("userId")).longValue();
+            boolean win = Boolean.TRUE.equals(s.get("win"));
+            int coinChange = s.get("coinChange") != null ? ((Number) s.get("coinChange")).intValue() : 0;
+            int exp = s.get("exp") != null ? ((Number) s.get("exp")).intValue() : 10;
+            
+            Player player = playerDao.findById(userId);
+            if (player == null) continue;
+            
+            player.totalGames++;
+            if (win) player.winGames++;
+            player.coins = Math.max(0, player.coins + coinChange);
+            player.exp += exp;
+            
+            while (player.exp >= getExpForLevel(player.level + 1)) {
+                player.exp -= getExpForLevel(player.level + 1);
+                player.level++;
+            }
+            
+            playerDao.update(player);
+        }
     }
     
-    private static boolean isSameDay(long t1, long t2) {
+    /**
+     * 记录逃跑
+     * 
+     * 逃跑次数+1，信用分-5
+     */
+    public void recordEscape(long userId) {
+        Player player = playerDao.findById(userId);
+        if (player == null) return;
+        
+        player.escapeGames++;
+        player.creditScore = Math.max(0, player.creditScore - 5);
+        playerDao.update(player);
+    }
+
+    public int getExpForLevel(int level) {
+        return level * 100;
+    }
+
+    private boolean isSameDay(long t1, long t2) {
         Calendar c1 = Calendar.getInstance();
         Calendar c2 = Calendar.getInstance();
         c1.setTimeInMillis(t1);
         c2.setTimeInMillis(t2);
-        return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) 
-            && c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR);
+        return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR)
+                && c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR);
     }
 }
+

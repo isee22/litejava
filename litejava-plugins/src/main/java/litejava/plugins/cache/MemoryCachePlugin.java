@@ -1,6 +1,6 @@
 package litejava.plugins.cache;
 
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -80,6 +80,58 @@ public class MemoryCachePlugin extends CachePlugin {
             return false;
         }
         return true;
+    }
+    
+    @Override
+    public long incr(String key) {
+        String k = key(key);
+        CacheEntry entry = store.get(k);
+        long value = 1;
+        if (entry != null && !entry.isExpired() && entry.value instanceof Number) {
+            value = ((Number) entry.value).longValue() + 1;
+        }
+        store.put(k, new CacheEntry(value, 0));
+        return value;
+    }
+    
+    // ==================== List 操作 ====================
+    
+    private final Map<String, LinkedList<String>> lists = new ConcurrentHashMap<>();
+    
+    @Override
+    public void rpush(String key, String value) {
+        String k = key(key);
+        lists.computeIfAbsent(k, x -> new LinkedList<>()).addLast(value);
+    }
+    
+    @Override
+    public void lpush(String key, String value) {
+        String k = key(key);
+        lists.computeIfAbsent(k, x -> new LinkedList<>()).addFirst(value);
+    }
+    
+    @Override
+    public String lpop(String key) {
+        String k = key(key);
+        LinkedList<String> list = lists.get(k);
+        if (list == null || list.isEmpty()) return null;
+        return list.pollFirst();
+    }
+    
+    @Override
+    public long llen(String key) {
+        String k = key(key);
+        LinkedList<String> list = lists.get(k);
+        return list != null ? list.size() : 0;
+    }
+    
+    @Override
+    public void lrem(String key, String value) {
+        String k = key(key);
+        LinkedList<String> list = lists.get(k);
+        if (list != null) {
+            list.remove(value);
+        }
     }
     
     /** 清空所有缓存 */

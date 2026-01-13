@@ -17,11 +17,11 @@ Start-Process -FilePath "cmd" -ArgumentList "/c", "mvn exec:java -pl hall-server
 Start-Sleep -Seconds 3
 
 Write-Host "[3/4] 启动 斗地主服务器 (9100/9101)..."
-Start-Process -FilePath "cmd" -ArgumentList "/c", "mvn exec:java -pl game-doudizhu -Dexec.mainClass=game.doudizhu.DoudizhuServer -q" -WindowStyle Normal
+Start-Process -FilePath "cmd" -ArgumentList "/c", "mvn exec:java -pl games-java/game-doudizhu -Dexec.mainClass=game.doudizhu.DoudizhuServer -q" -WindowStyle Normal
 Start-Sleep -Seconds 2
 
 Write-Host "[4/4] 启动 五子棋服务器 (9200/9201)..."
-Start-Process -FilePath "cmd" -ArgumentList "/c", "mvn exec:java -pl game-gobang -Dexec.mainClass=game.gobang.GobangServer -q" -WindowStyle Normal
+Start-Process -FilePath "cmd" -ArgumentList "/c", "mvn exec:java -pl games-java/game-gobang -Dexec.mainClass=game.gobang.GobangServer -q" -WindowStyle Normal
 
 Write-Host ""
 Write-Host "========================================"

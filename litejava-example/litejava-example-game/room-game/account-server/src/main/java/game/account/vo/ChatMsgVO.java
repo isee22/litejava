@@ -16,3 +16,4 @@ public class ChatMsgVO {
     /** 需要接收此消息的用户列表 */
     public List<Long> recipients;
 }
+

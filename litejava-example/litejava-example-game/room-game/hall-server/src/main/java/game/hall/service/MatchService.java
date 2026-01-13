@@ -1,249 +1,152 @@
 package game.hall.service;
 
-import game.hall.model.MatchResult;
-import game.hall.model.MatchUser;
-import game.hall.model.ServerInfo;
-import game.hall.util.SignUtil;
+import game.common.ErrCode;
+import game.common.GameException;
+import game.hall.G;
+import game.hall.cache.CacheKeys;
+import game.hall.vo.MatchUserVO;
+import game.hall.vo.RoomResultVO;
 import litejava.App;
-import litejava.plugins.cache.MemoryCachePlugin;
+import litejava.plugins.cache.RedisCachePlugin;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 /**
- * 匹配服务 (原作没有，本项目扩展)
- * 
- * 职责:
- * - 匹配队列管理
- * - 匹配逻辑处理
+ * 匹配服务
  */
 public class MatchService {
     
-    private static final String KEY_ROOM_SERVER = "hall:room:";
-    private static final String KEY_USER_ROOM = "hall:user:";
+    public App app = G.app;
+    public RedisCachePlugin cache = G.cache;
+    public RoomService roomService = G.roomService;
     
-    private final App app;
-    private final MemoryCachePlugin cache;
-    private final SignUtil sign;
-    private final RoomService roomService;
-    private final ClientService clientService;
+    /** 匹配所需人数 */
+    public int matchSize = 2;
     
-    // 匹配队列
-    private final Map<String, List<MatchUser>> matchQueues = new ConcurrentHashMap<>();
-    private final Map<Long, String> userMatchStatus = new ConcurrentHashMap<>();
-    private final Map<Long, MatchResult> matchResults = new ConcurrentHashMap<>();
-    private final Map<String, Integer> queueConfigs = new HashMap<>();
+    /** 段位匹配范围 (初始) */
+    public int rankRange = 100;
     
-    public MatchService(App app, MemoryCachePlugin cache, SignUtil sign, 
-                        RoomService roomService, ClientService clientService) {
-        this.app = app;
-        this.cache = cache;
-        this.sign = sign;
-        this.roomService = roomService;
-        this.clientService = clientService;
+    /** 段位匹配范围扩展 (每30秒) */
+    public int rankRangeExpand = 50;
+    
+    public void joinQueue(long userId, String name, String gameType, String conf, int rank) {
+        String existingRoom = cache.get(CacheKeys.user(userId));
+        if (existingRoom != null) {
+            GameException.error(ErrCode.ROOM_ALREADY_IN, "already in room");
+        }
         
-        initQueueConfigs();
+        String existingMatch = cache.get(CacheKeys.matchUser(userId));
+        if (existingMatch != null) {
+            GameException.error(ErrCode.INVALID_ACTION, "already in match queue");
+        }
+        
+        MatchUserVO info = new MatchUserVO();
+        info.userId = userId;
+        info.name = name;
+        info.gameType = gameType;
+        info.conf = conf;
+        info.rank = rank;
+        info.joinTime = System.currentTimeMillis();
+        
+        cache.set(CacheKeys.matchUser(userId), app.json.stringify(info), CacheKeys.MATCH_EXPIRE);
+        cache.zadd(CacheKeys.matchQueue(gameType), userId, info.joinTime);
+        
+        app.log.info("加入匹配: userId=" + userId + ", gameType=" + gameType + ", rank=" + rank);
     }
     
-    private void initQueueConfigs() {
-        queueConfigs.put("doudizhu:normal", 3);
-        queueConfigs.put("mahjong:normal", 4);
-        queueConfigs.put("gobang:normal", 2);
+    public void cancelMatch(long userId, String gameType) {
+        cache.del(CacheKeys.matchUser(userId));
+        cache.zrem(CacheKeys.matchQueue(gameType), String.valueOf(userId));
+        app.log.info("取消匹配: userId=" + userId);
     }
     
-    /**
-     * 注册路由
-     */
-    public void setupRoutes() {
-        // 开始匹配
-        app.post("/match/start", ctx -> {
-            Map<String, Object> req = ctx.bindJSON();
-            long userId = ((Number) req.get("userId")).longValue();
-            String gameType = (String) req.get("gameType");
-            String level = (String) req.getOrDefault("level", "normal");
-            String name = (String) req.getOrDefault("name", "玩家" + userId);
+    public MatchUserVO getMatchStatus(long userId) {
+        String json = cache.get(CacheKeys.matchUser(userId));
+        if (json == null) return null;
+        return app.json.parse(json, MatchUserVO.class);
+    }
+    
+    public void doMatch(String gameType) {
+        cache.withLock(CacheKeys.lockMatch(gameType), CacheKeys.LOCK_EXPIRE, () -> {
+            doMatchInternal(gameType);
+            return null;
+        });
+    }
+    
+    private void doMatchInternal(String gameType) {
+        Set<String> userIds = cache.zrange(CacheKeys.matchQueue(gameType), 0, -1);
+        if (userIds == null || userIds.size() < matchSize) return;
+        
+        List<MatchUserVO> queue = new ArrayList<>();
+        for (String odUserId : userIds) {
+            MatchUserVO info = getMatchStatus(Long.parseLong(odUserId));
+            if (info != null) queue.add(info);
+        }
+        
+        List<MatchUserVO> matched = new ArrayList<>();
+        for (MatchUserVO user : queue) {
+            if (matched.size() >= matchSize) break;
             
-            Map<String, Object> result = startMatch(userId, gameType, level, name);
-            if (result.containsKey("errcode")) {
-                ctx.fail(SignUtil.toInt(result.get("errcode")), (String) result.get("errmsg"));
+            long waitTime = System.currentTimeMillis() - user.joinTime;
+            int expandTimes = (int) (waitTime / 30000);
+            int currentRange = rankRange + expandTimes * rankRangeExpand;
+            
+            if (matched.isEmpty()) {
+                matched.add(user);
             } else {
-                ctx.ok(result);
-            }
-        });
-        
-        // 取消匹配
-        app.post("/match/cancel", ctx -> {
-            Map<String, Object> req = ctx.bindJSON();
-            long userId = ((Number) req.get("userId")).longValue();
-            cancelMatch(userId);
-            ctx.ok(null);
-        });
-    }
-    
-    /**
-     * 注册管理路由
-     */
-    public void setupAdminRoutes() {
-        // 获取匹配队列状态
-        app.get("/admin/match_queues", ctx -> {
-            ctx.ok(getQueueStatus());
-        });
-    }
-    
-    public Map<String, Integer> getQueueConfigs() {
-        return queueConfigs;
-    }
-    
-    public Map<String, Object> startMatch(long userId, String gameType, String level, String name) {
-        String queueKey = gameType + ":" + level;
-        if (!queueConfigs.containsKey(queueKey)) {
-            return errorResult(1, "invalid game type");
-        }
-        
-        // 检查是否已有匹配结果
-        MatchResult result = matchResults.remove(userId);
-        if (result != null) {
-            return result.toMap();
-        }
-        
-        // 检查是否正在匹配 - 如果是，返回 matching 状态而不是错误
-        if (userMatchStatus.containsKey(userId)) {
-            // 等待匹配结果 (最多5秒)
-            for (int i = 0; i < 10; i++) {
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    break;
-                }
-                result = matchResults.remove(userId);
-                if (result != null) {
-                    return result.toMap();
-                }
-                if (!userMatchStatus.containsKey(userId)) {
-                    return Map.of("status", "cancelled");
+                MatchUserVO first = matched.get(0);
+                if (Math.abs(user.rank - first.rank) <= currentRange) {
+                    matched.add(user);
                 }
             }
-            return Map.of("status", "matching");
         }
         
-        // 加入队列
-        MatchUser user = new MatchUser();
-        user.userId = userId;
-        user.name = name;
-        matchQueues.computeIfAbsent(queueKey, k -> new CopyOnWriteArrayList<>()).add(user);
-        userMatchStatus.put(userId, queueKey);
+        if (matched.size() >= matchSize) {
+            createMatchRoom(gameType, matched);
+        }
+    }
+    
+    private void createMatchRoom(String gameType, List<MatchUserVO> players) {
+        if (players.isEmpty()) return;
         
-        // 等待匹配结果 (最多5秒)
-        for (int i = 0; i < 10; i++) {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                break;
-            }
-            result = matchResults.remove(userId);
-            if (result != null) {
-                return result.toMap();
-            }
-            if (!userMatchStatus.containsKey(userId)) {
-                return Map.of("status", "cancelled");
-            }
-        }
-        return Map.of("status", "matching");
-    }
-    
-    public void cancelMatch(long userId) {
-        String queueKey = userMatchStatus.remove(userId);
-        if (queueKey != null) {
-            List<MatchUser> queue = matchQueues.get(queueKey);
-            if (queue != null) {
-                queue.removeIf(u -> u.userId == userId);
-            }
-        }
-    }
-    
-    public Map<String, Object> getQueueStatus() {
-        Map<String, Object> result = new HashMap<>();
-        for (Map.Entry<String, List<MatchUser>> e : matchQueues.entrySet()) {
-            result.put(e.getKey(), e.getValue().size());
-        }
-        return result;
-    }
-    
-    /**
-     * 处理匹配 (定时调用)
-     */
-    public void processMatch() {
-        for (Map.Entry<String, List<MatchUser>> entry : matchQueues.entrySet()) {
-            String queueKey = entry.getKey();
-            List<MatchUser> queue = entry.getValue();
-            int need = queueConfigs.getOrDefault(queueKey, 4);
+        MatchUserVO first = players.get(0);
+        
+        try {
+            RoomResultVO room = roomService.createRoom(first.userId, first.name, gameType, first.conf);
             
-            if (!queue.isEmpty()) {
-                app.log.info("processMatch: " + queueKey + " queue=" + queue.size() + " need=" + need);
-            }
-            
-            while (queue.size() >= need) {
-                app.log.info("processMatch: starting match for " + queueKey);
-                List<MatchUser> players = new ArrayList<>();
-                for (int i = 0; i < need && !queue.isEmpty(); i++) {
-                    players.add(queue.remove(0));
-                }
-                
-                String gameType = queueKey.split(":")[0];
-                ServerInfo server = roomService.chooseServer(gameType);
-                if (server == null) {
-                    app.log.warn("processMatch: no server for " + gameType);
-                    queue.addAll(0, players);
-                    break;
-                }
-                
-                app.log.info("processMatch: found server " + server.id + " for " + gameType);
-                
+            for (int i = 1; i < players.size(); i++) {
+                MatchUserVO player = players.get(i);
                 try {
-                    // 创建房间
-                    Map<String, Object> createResult = roomService.createRoom(players.get(0).userId, 0, "{}", server);
-                    app.log.info("processMatch: createRoom result = " + createResult);
-                    if (createResult == null || SignUtil.toInt(createResult.get("errcode")) != 0) {
-                        app.log.error("processMatch: createRoom failed");
-                        queue.addAll(0, players);
-                        break;
-                    }
-                    
-                    String roomId = (String) createResult.get("roomid");
-                    cache.set(KEY_ROOM_SERVER + roomId, server.id, 86400);
-                    
-                    // 所有玩家进入房间
-                    for (MatchUser p : players) {
-                        Map<String, Object> enterResult = roomService.enterRoom(p.userId, p.name, roomId, server);
-                        if (enterResult != null && SignUtil.toInt(enterResult.get("errcode")) == 0) {
-                            cache.set(KEY_USER_ROOM + p.userId, roomId, 86400);
-                            userMatchStatus.remove(p.userId);
-                            
-                            MatchResult r = new MatchResult();
-                            r.status = "matched";
-                            r.roomId = roomId;
-                            r.ip = server.ip;
-                            r.port = server.clientport;
-                            r.gameType = gameType;
-                            r.token = String.valueOf(enterResult.get("token"));
-                            matchResults.put(p.userId, r);
-                        }
-                    }
-                    app.log.info("Match success: " + queueKey + " -> " + roomId);
+                    roomService.joinRoom(player.userId, player.name, room.roomId);
                 } catch (Exception e) {
-                    app.log.error("Match failed: " + e.getMessage());
-                    queue.addAll(0, players);
-                    break;
+                    app.log.warn("匹配玩家加入失败: userId=" + player.userId + ", " + e.getMessage());
                 }
             }
+            
+            for (MatchUserVO player : players) {
+                cache.del(CacheKeys.matchUser(player.userId));
+                cache.zrem(CacheKeys.matchQueue(gameType), String.valueOf(player.userId));
+            }
+            
+            app.log.info("匹配成功: gameType=" + gameType + ", players=" + players.size() + ", roomId=" + room.roomId);
+            
+        } catch (Exception e) {
+            app.log.error("创建匹配房间失败: " + e.getMessage());
         }
     }
     
-    private Map<String, Object> errorResult(int code, String msg) {
-        Map<String, Object> ret = new HashMap<>();
-        ret.put("errcode", code);
-        ret.put("errmsg", msg);
-        return ret;
+    public void cleanupExpired(String gameType) {
+        long expireTime = System.currentTimeMillis() - CacheKeys.MATCH_EXPIRE * 1000L;
+        Set<String> expired = cache.zrangeByScore(CacheKeys.matchQueue(gameType), 0, expireTime);
+        
+        if (expired != null) {
+            for (String odUserId : expired) {
+                cache.del(CacheKeys.matchUser(Long.parseLong(odUserId)));
+                cache.zrem(CacheKeys.matchQueue(gameType), odUserId);
+                app.log.info("匹配超时移除: userId=" + odUserId);
+            }
+        }
     }
 }

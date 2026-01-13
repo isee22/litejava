@@ -1,5 +1,7 @@
 package game.hall.util;
 
+import game.hall.G;
+
 import java.security.MessageDigest;
 
 /**
@@ -7,13 +9,13 @@ import java.security.MessageDigest;
  */
 public class SignUtil {
     
-    private final String priKey;
+    private static String priKey;
     
-    public SignUtil(String priKey) {
-        this.priKey = priKey;
+    public static void init(String key) {
+        priKey = key;
     }
     
-    public String sign(Object... parts) {
+    public static String sign(Object... parts) {
         StringBuilder sb = new StringBuilder();
         for (Object p : parts) {
             sb.append(p);
@@ -22,7 +24,7 @@ public class SignUtil {
         return md5(sb.toString());
     }
     
-    public String md5(String s) {
+    public static String md5(String s) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] d = md.digest(s.getBytes("UTF-8"));

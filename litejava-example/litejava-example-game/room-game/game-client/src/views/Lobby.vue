@@ -5,6 +5,7 @@
       <div class="user-info">
         <span class="avatar">👤</span>
         <span class="name">{{ userStore.playerName }}</span>
+        <span class="room-cards">🎫 房卡: {{ roomCardCount }}</span>
       </div>
       <button class="logout-btn" @click="logout">退出</button>
     </header>
@@ -25,103 +26,77 @@
 
     <!-- 主内容区 -->
     <div class="main-content">
-      <!-- 左侧：房间列表 -->
+      <!-- 左侧：级别场列表 -->
       <div class="room-list-panel">
         <div class="panel-header">
-          <h3>{{ currentGameName }} - 房间列表</h3>
-          <button class="refresh-btn" @click="refreshRooms" :disabled="loading">
-            🔄 刷新
-          </button>
+          <h3>{{ currentGameName }} - 选择场次</h3>
         </div>
         
-        <div class="room-list" v-if="!loading">
-          <div v-if="rooms.length === 0" class="empty-tip">
-            暂无房间，快来创建一个吧！
-          </div>
+        <div class="level-list">
           <div 
-            v-for="room in rooms" 
-            :key="room.roomId"
-            class="room-item"
-            :class="{ full: room.playerCount >= room.maxPlayers, gaming: room.gaming }"
+            v-for="level in gameLevels" 
+            :key="level.roomLevel"
+            class="level-item"
+            @click="quickStartLevel(level)"
           >
-            <div class="room-info">
-              <span class="room-id">房间 {{ room.roomId }}</span>
-              <span class="room-owner">房主: {{ room.ownerName || '未知' }}</span>
+            <div class="level-info">
+              <span class="level-name">{{ level.roomName }}</span>
+              <span class="level-desc">底分: {{ level.baseScore }} | 准入: {{ level.minCoins }}金币</span>
             </div>
-            <div class="room-status">
-              <span class="player-count">
-                👥 {{ room.playerCount }}/{{ room.maxPlayers }}
-              </span>
-              <span v-if="room.gaming" class="gaming-tag">游戏中</span>
+            <div class="level-status">
+              <span class="player-count">👥 在线中</span>
             </div>
-            <button 
-              class="join-btn"
-              :disabled="room.playerCount >= room.maxPlayers || room.gaming"
-              @click="joinRoom(room.roomId)"
-            >
-              {{ room.gaming ? '游戏中' : (room.playerCount >= room.maxPlayers ? '已满' : '加入') }}
-            </button>
+            <button class="join-btn">快速开始</button>
+          </div>
+          <div v-if="gameLevels.length === 0" class="empty-tip">
+            暂无场次配置
           </div>
         </div>
-        <div v-else class="loading">加载中...</div>
       </div>
 
       <!-- 右侧：操作面板 -->
       <div class="action-panel">
-        <!-- 快速开始 -->
+        <!-- 创建好友房 -->
         <div class="action-card">
-          <h4>⚡ 快速开始</h4>
-          <p>自动匹配玩家，快速进入游戏</p>
-          <button 
-            class="action-btn primary"
-            :disabled="matching"
-            @click="quickStart"
-          >
-            {{ matching ? '匹配中...' : '快速匹配' }}
-          </button>
-          <button 
-            v-if="matching"
-            class="action-btn cancel"
-            @click="cancelMatch"
-          >
-            取消匹配
-          </button>
-          <div v-if="matchStatus" class="match-status">{{ matchStatus }}</div>
-        </div>
-
-        <!-- 创建房间 -->
-        <div class="action-card">
-          <h4>🏠 创建房间</h4>
-          <p>创建私人房间，邀请好友</p>
-          <div class="create-options">
-            <label>
-              人数:
-              <select v-model="createPlayerCount">
-                <option v-for="n in playerCountOptions" :key="n" :value="n">{{ n }}人</option>
-              </select>
-            </label>
+          <h4>🏠 创建好友房</h4>
+          <p>消耗1张房卡，邀请好友</p>
+          <div class="room-card-info">
+            <span>房卡: {{ roomCardCount }}</span>
           </div>
-          <button class="action-btn success" @click="createRoom">
-            创建房间
+          <button 
+            class="action-btn success" 
+            @click="createFriendRoom"
+            :disabled="roomCardCount < 1"
+          >
+            创建好友房
           </button>
         </div>
 
-        <!-- 加入房间 -->
+        <!-- 加入好友房 -->
         <div class="action-card">
-          <h4>🚪 加入房间</h4>
-          <p>输入房间号直接加入</p>
-          <input 
-            v-model="joinRoomId" 
-            placeholder="输入房间号"
-            class="room-input"
-          />
-          <button 
-            class="action-btn info"
-            :disabled="!joinRoomId"
-            @click="joinRoomById"
-          >
-            加入
+          <h4>🚪 加入好友房</h4>
+          <p>输入6位房间号</p>
+          <button class="action-btn info" @click="showRoomIdInput">
+            输入房间号
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 九宫格输入房间号弹窗 -->
+    <div v-if="showInput" class="modal-overlay" @click="closeRoomIdInput">
+      <div class="modal-content" @click.stop>
+        <h3>输入房间号</h3>
+        <div class="room-id-display">{{ inputRoomId || '______' }}</div>
+        <div class="numpad">
+          <button v-for="n in 9" :key="n" @click="inputDigit(n)" class="num-btn">{{ n }}</button>
+          <button @click="clearInput" class="num-btn">清空</button>
+          <button @click="inputDigit(0)" class="num-btn">0</button>
+          <button @click="deleteDigit" class="num-btn">删除</button>
+        </div>
+        <div class="modal-actions">
+          <button @click="closeRoomIdInput" class="cancel-btn">取消</button>
+          <button @click="confirmRoomId" :disabled="inputRoomId.length !== 6" class="confirm-btn">确定</button>
         </div>
       </div>
     </div>
@@ -142,22 +117,21 @@ const gameStore = useGameStore()
 
 // 游戏列表
 const games = [
-  { type: GameType.DOUDIZHU, name: '斗地主', icon: '🃏', maxPlayers: [3] },
-  { type: GameType.MAHJONG, name: '麻将', icon: '🀄', maxPlayers: [4] },
-  { type: GameType.GOBANG, name: '五子棋', icon: '⚫', maxPlayers: [2] },
-  { type: GameType.TEXAS, name: '德州扑克', icon: '♠️', maxPlayers: [6, 9] },
-  { type: GameType.NIUNIU, name: '牛牛', icon: '🐂', maxPlayers: [6, 8] },
-  { type: GameType.WEREWOLF, name: '狼人杀', icon: '🐺', maxPlayers: [6, 8, 9, 12] }
+  { type: GameType.DOUDIZHU, name: '斗地主', icon: '🃏' },
+  { type: GameType.MAHJONG, name: '麻将', icon: '🀄' },
+  { type: GameType.GOBANG, name: '五子棋', icon: '⚫' },
+  { type: GameType.TEXAS, name: '德州扑克', icon: '♠️' },
+  { type: GameType.NIUNIU, name: '牛牛', icon: '🐂' },
+  { type: GameType.WEREWOLF, name: '狼人杀', icon: '🐺' }
 ]
 
 // 状态
 const selectedGame = ref(GameType.DOUDIZHU)
-const rooms = ref([])
-const loading = ref(false)
+const gameLevels = ref([])
+const roomCardCount = ref(0)
+const showInput = ref(false)
+const inputRoomId = ref('')
 const matching = ref(false)
-const matchStatus = ref('')
-const createPlayerCount = ref(3)
-const joinRoomId = ref('')
 
 // 计算属性
 const currentGameName = computed(() => {
@@ -165,116 +139,101 @@ const currentGameName = computed(() => {
   return game ? game.name : ''
 })
 
-const playerCountOptions = computed(() => {
-  const game = games.find(g => g.type === selectedGame.value)
-  return game ? game.maxPlayers : [4]
-})
-
 // 选择游戏
 function selectGame(type) {
   selectedGame.value = type
-  const game = games.find(g => g.type === type)
-  if (game && game.maxPlayers.length > 0) {
-    createPlayerCount.value = game.maxPlayers[0]
-  }
-  refreshRooms()
+  loadGameLevels()
 }
 
-// 刷新房间列表
-async function refreshRooms() {
-  loading.value = true
+// 加载游戏级别场配置
+async function loadGameLevels() {
   try {
-    const result = await hallApi.getRoomConfigs()
-    if (result.code === 0) {
-      rooms.value = result.data || []
-    }
-  } catch (e) {
-    console.error('获取房间列表失败:', e)
-  } finally {
-    loading.value = false
-  }
-}
-
-// 快速匹配
-async function quickStart() {
-  matching.value = true
-  matchStatus.value = '正在匹配玩家...'
-  
-  try {
-    const result = await hallApi.startMatch(
-      userStore.playerId,
-      selectedGame.value,
-      'normal',
-      userStore.playerName
-    )
-    
-    if (result.code !== 0) {
-      showMessage(result.msg || '匹配失败')
-      matching.value = false
-      matchStatus.value = ''
+    // 优先从 localStorage 读取
+    const cached = localStorage.getItem('roomConfigs')
+    if (cached) {
+      const configs = JSON.parse(cached)
+      gameLevels.value = configs.filter(c => c.gameType === selectedGame.value)
       return
     }
     
-    if (result.data.status === 'matched') {
-      matchStatus.value = '匹配成功！'
-      await enterGameRoom(result.data)
-    } else {
-      // 继续轮询
-      pollMatchResult()
+    // 缓存不存在时才请求
+    const result = await hallApi.getRoomConfigs()
+    if (result.code === 0 && result.data) {
+      localStorage.setItem('roomConfigs', JSON.stringify(result.data))
+      gameLevels.value = result.data.filter(c => c.gameType === selectedGame.value)
     }
   } catch (e) {
-    showMessage('匹配失败，请重试')
-    matching.value = false
-    matchStatus.value = ''
+    console.error('加载场次配置失败:', e)
   }
 }
 
-// 轮询匹配结果
-async function pollMatchResult() {
-  if (!matching.value) return
+// 加载房卡数量
+async function loadRoomCards() {
+  try {
+    // 优先从 localStorage 读取
+    const cached = localStorage.getItem('playerItems')
+    if (cached) {
+      const items = JSON.parse(cached)
+      const roomCard = items.find(item => item.itemId === 5001)
+      roomCardCount.value = roomCard ? roomCard.count : 0
+      return
+    }
+    
+    // 缓存不存在时才请求
+    const resp = await fetch(`/api/account/bag/${userStore.playerId}`)
+    const result = await resp.json()
+    if (result.code === 0 && result.data) {
+      localStorage.setItem('playerItems', JSON.stringify(result.data))
+      const roomCard = result.data.find(item => item.itemId === 5001)
+      roomCardCount.value = roomCard ? roomCard.count : 0
+    }
+  } catch (e) {
+    console.error('加载房卡失败:', e)
+  }
+}
+
+// 快速开始（级别场）- 有房间就加入，没房间就创建
+async function quickStartLevel(level) {
+  if (matching.value) return
   
   try {
-    const result = await hallApi.pollMatch(
+    // 调用快速开始API
+    const result = await hallApi.quickStart(
       userStore.playerId,
       selectedGame.value,
-      'normal',
-      userStore.playerName
+      { maxPlayers: level.maxPlayers || 4, roomLevel: level.roomLevel }
     )
     
-    if (result.data?.status === 'matched') {
-      matchStatus.value = '匹配成功！'
-      await enterGameRoom(result.data)
-    } else if (result.data?.status === 'cancelled') {
-      matching.value = false
-      matchStatus.value = ''
-    } else {
-      // 继续轮询
-      setTimeout(pollMatchResult, 1000)
+    if (result.code !== 0) {
+      showMessage(result.msg || '快速开始失败')
+      return
     }
+    
+    showMessage('进入房间成功')
+    await enterGameRoom(result.data)
   } catch (e) {
-    console.error('轮询匹配失败:', e)
-    setTimeout(pollMatchResult, 2000)
+    showMessage('快速开始失败，请重试')
   }
 }
 
-// 取消匹配
-async function cancelMatch() {
-  try {
-    await hallApi.cancelMatch(userStore.playerId)
-  } catch (e) {
-    console.error('取消匹配失败:', e)
-  }
-  matching.value = false
-  matchStatus.value = ''
-}
+// 不再需要轮询匹配
+// async function pollMatchResult(levelNum) { ... }
 
-// 创建房间
-async function createRoom() {
+// 不再需要取消匹配
+// async function cancelMatch() { ... }
+
+// 创建好友房
+async function createFriendRoom() {
+  if (roomCardCount.value < 1) {
+    showMessage('房卡不足')
+    return
+  }
+  
   try {
     const result = await hallApi.createRoom(
       userStore.playerId,
       selectedGame.value,
-      { maxPlayers: createPlayerCount.value }
+      { maxPlayers: 4 }
     )
     
     if (result.code !== 0) {
@@ -282,15 +241,72 @@ async function createRoom() {
       return
     }
     
-    showMessage('房间创建成功')
+    // 创建成功，扣除房卡
+    roomCardCount.value--
+    updateLocalRoomCards(-1)
+    
+    showMessage('好友房创建成功')
     await enterGameRoom(result.data)
   } catch (e) {
     showMessage('创建失败，请重试')
   }
 }
 
-// 加入房间
-async function joinRoom(roomId) {
+// 更新本地房卡数量
+function updateLocalRoomCards(delta) {
+  const cached = localStorage.getItem('playerItems')
+  if (cached) {
+    const items = JSON.parse(cached)
+    const roomCard = items.find(item => item.itemId === 5001)
+    if (roomCard) {
+      roomCard.count += delta
+      localStorage.setItem('playerItems', JSON.stringify(items))
+    }
+  }
+}
+
+// 显示房间号输入
+function showRoomIdInput() {
+  showInput.value = true
+  inputRoomId.value = ''
+}
+
+// 关闭房间号输入
+function closeRoomIdInput() {
+  showInput.value = false
+  inputRoomId.value = ''
+}
+
+// 输入数字
+function inputDigit(digit) {
+  if (inputRoomId.value.length < 6) {
+    inputRoomId.value += digit
+  }
+}
+
+// 删除数字
+function deleteDigit() {
+  if (inputRoomId.value.length > 0) {
+    inputRoomId.value = inputRoomId.value.slice(0, -1)
+  }
+}
+
+// 清空输入
+function clearInput() {
+  inputRoomId.value = ''
+}
+
+// 确认房间号
+async function confirmRoomId() {
+  if (inputRoomId.value.length !== 6) {
+    showMessage('请输入6位房间号')
+    return
+  }
+  
+  // 先保存房间号，再关闭弹窗
+  const roomId = inputRoomId.value
+  closeRoomIdInput()
+  
   try {
     const result = await hallApi.enterRoom(
       userStore.playerId,
@@ -310,30 +326,32 @@ async function joinRoom(roomId) {
   }
 }
 
-// 通过房间号加入
-function joinRoomById() {
-  if (joinRoomId.value) {
-    joinRoom(joinRoomId.value)
-  }
-}
-
-// 进入游戏房间 (通过 Nginx 代理连接 GameServer WebSocket)
+// 进入游戏房间
 async function enterGameRoom(data) {
-  const { roomid, serverId, gameType, token } = data
+  const roomId = data.roomId || data.roomid
+  const { ip, port, gameType, token, time, sign } = data
   
-  // 生产环境: 通过 Nginx 代理，不暴露后端 IP/端口
-  // 开发环境: 也可以直连 (需要配置 API_CONFIG.wsProxy)
-  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${wsProtocol}//${location.host}/ws/game/${gameType}?server=${serverId}&token=${token}`
+  let wsUrl = data.wsUrl
+  if (!wsUrl && ip && port) {
+    wsUrl = `ws://${ip}:${port}/game`
+  }
   
-  gameStore.setRoom(roomid, -1)
+  if (!wsUrl) {
+    showMessage('无法获取游戏服务器地址')
+    return
+  }
+  
+  gameStore.setRoom(roomId, -1)
   gameStore.setGameType(gameType)
   
+  // 构造登录参数 (带签名)
+  const loginParams = { token, roomid: roomId, time, sign }
+  
   try {
-    await wsManager.connect(wsUrl, token)
+    await wsManager.connect(wsUrl, loginParams)
     router.push('/room')
   } catch (e) {
-    showMessage('连接游戏服务器失败')
+    showMessage('连接游戏服务器失败: ' + (e.message || '未知错误'))
     gameStore.reset()
   }
 }
@@ -347,7 +365,6 @@ function logout() {
 }
 
 onMounted(() => {
-  // 检查登录状态
   if (!userStore.isLoggedIn) {
     const userId = localStorage.getItem('userId')
     const playerName = localStorage.getItem('playerName')
@@ -359,7 +376,8 @@ onMounted(() => {
     }
   }
   
-  refreshRooms()
+  loadGameLevels()
+  loadRoomCards()
 })
 </script>
 
@@ -381,7 +399,7 @@ onMounted(() => {
 .user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
 }
 .user-info .avatar {
   font-size: 24px;
@@ -389,6 +407,13 @@ onMounted(() => {
 .user-info .name {
   font-size: 18px;
   font-weight: bold;
+}
+.user-info .room-cards {
+  padding: 5px 15px;
+  background: rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  border-radius: 15px;
+  font-size: 14px;
 }
 .logout-btn {
   padding: 8px 20px;
@@ -447,7 +472,7 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-/* 房间列表面板 */
+/* 级别场列表 */
 .room-list-panel {
   flex: 1;
   background: rgba(255, 255, 255, 0.05);
@@ -456,32 +481,14 @@ onMounted(() => {
   min-height: 500px;
 }
 .panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 15px;
 }
 .panel-header h3 {
   margin: 0;
   font-size: 18px;
 }
-.refresh-btn {
-  padding: 8px 15px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.refresh-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-.refresh-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
-.room-list {
+.level-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -491,56 +498,41 @@ onMounted(() => {
   padding: 50px;
   color: rgba(255, 255, 255, 0.5);
 }
-.loading {
-  text-align: center;
-  padding: 50px;
-}
 
-.room-item {
+.level-item {
   display: flex;
   align-items: center;
   padding: 15px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   transition: all 0.3s;
+  cursor: pointer;
 }
-.room-item:hover {
+.level-item:hover {
   background: rgba(255, 255, 255, 0.12);
-}
-.room-item.full {
-  opacity: 0.6;
-}
-.room-item.gaming {
-  border-left: 3px solid #f39c12;
+  transform: translateX(5px);
 }
 
-.room-info {
+.level-info {
   flex: 1;
 }
-.room-id {
+.level-name {
   font-weight: bold;
   display: block;
   margin-bottom: 5px;
+  font-size: 16px;
 }
-.room-owner {
+.level-desc {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
 }
 
-.room-status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.level-status {
   margin-right: 15px;
 }
 .player-count {
   font-size: 14px;
-}
-.gaming-tag {
-  padding: 3px 8px;
-  background: #f39c12;
-  border-radius: 3px;
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .join-btn {
@@ -552,12 +544,21 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s;
 }
-.join-btn:hover:not(:disabled) {
+.join-btn:hover {
   background: #2980b9;
 }
-.join-btn:disabled {
-  background: #7f8c8d;
-  cursor: not-allowed;
+
+.join-btn {
+  padding: 8px 20px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.join-btn:hover {
+  background: #2980b9;
 }
 
 /* 操作面板 */
@@ -583,36 +584,14 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.create-options {
+.room-card-info {
   margin-bottom: 15px;
-}
-.create-options label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 5px;
+  text-align: center;
   font-size: 14px;
-}
-.create-options select {
-  padding: 8px 15px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5px;
-  flex: 1;
-}
-
-.room-input {
-  width: 100%;
-  padding: 10px 15px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5px;
-  margin-bottom: 15px;
-  box-sizing: border-box;
-}
-.room-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
 }
 
 .action-btn {
@@ -624,23 +603,10 @@ onMounted(() => {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
-  margin-bottom: 10px;
-}
-.action-btn:last-child {
-  margin-bottom: 0;
 }
 .action-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
-}
-
-.action-btn.primary {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: white;
-}
-.action-btn.primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
 }
 
 .action-btn.success {
@@ -661,16 +627,109 @@ onMounted(() => {
   box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
 }
 
-.action-btn.cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+/* 九宫格输入弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.match-status {
+.modal-content {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-radius: 20px;
+  padding: 30px;
+  min-width: 350px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content h3 {
+  margin: 0 0 20px;
   text-align: center;
-  margin-top: 10px;
-  font-size: 14px;
-  color: #f39c12;
+  font-size: 20px;
+}
+
+.room-id-display {
+  text-align: center;
+  font-size: 32px;
+  font-weight: bold;
+  letter-spacing: 8px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.num-btn {
+  padding: 20px;
+  font-size: 24px;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.num-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+.num-btn:active {
+  transform: scale(0.95);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancel-btn, .confirm-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.confirm-btn {
+  background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
+  color: white;
+}
+.confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+}
+.confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

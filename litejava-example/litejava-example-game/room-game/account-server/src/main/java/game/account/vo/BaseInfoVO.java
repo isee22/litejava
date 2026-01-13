@@ -8,3 +8,4 @@ public class BaseInfoVO {
     public int sex;
     public String headimgurl;
 }
+

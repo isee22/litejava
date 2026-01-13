@@ -7,3 +7,4 @@ public class AddGemsReqVO {
     public long userid;
     public int gems;
 }
+

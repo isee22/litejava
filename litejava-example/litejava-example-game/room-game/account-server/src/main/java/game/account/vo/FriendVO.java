@@ -11,3 +11,4 @@ public class FriendVO {
     public int vipLevel;
     public long addTime;
 }
+

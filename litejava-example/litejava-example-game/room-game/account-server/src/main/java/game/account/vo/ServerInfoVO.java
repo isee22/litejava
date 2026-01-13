@@ -8,3 +8,4 @@ public class ServerInfoVO {
     public String hall;
     public String appweb;
 }
+

@@ -7,3 +7,4 @@ public class FriendDeleteReqVO {
     public long userId;
     public long friendId;
 }
+

@@ -4,3 +4,4 @@ public class JoinRoomReq {
     public long userId;
     public String roomId;
 }
+

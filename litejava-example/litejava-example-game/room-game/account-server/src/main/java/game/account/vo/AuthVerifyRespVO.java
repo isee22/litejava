@@ -9,3 +9,4 @@ public class AuthVerifyRespVO {
     public int coins;
     public int level;
 }
+

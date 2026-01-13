@@ -1,0 +1,13 @@
+{
+  "name": "game-doudizhu4-node",
+  "version": "1.0.0",
+  "description": "四人斗地主游戏服务器 (Node.js)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "game-core": "file:../node-game-core",
+    "js-yaml": "^4.1.0"
+  }
+}

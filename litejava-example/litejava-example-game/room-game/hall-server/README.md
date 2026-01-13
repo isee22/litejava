@@ -1,94 +1,125 @@
-# Hall Server - 大厅服务器
+# Hall Server - 大厅服务
 
-BabyKylin 模式的核心调度服务，负责房间管理和 GameServer 负载均衡。
+房间调度和匹配服务，负责 GameServer 负载均衡和房间路由。
 
-## 职责
+## 部署模式
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Hall Server                             │
-├─────────────────────────────────────────────────────────────┤
-│  面向 GameServer:                                            │
-│  - /register_gs    GameServer 注册                          │
-│  - /heartbeat      心跳 (上报负载)                           │
-│  - /room_destroyed 房间销毁通知                              │
-├─────────────────────────────────────────────────────────────┤
-│  面向客户端:                                                 │
-│  - /create_private_room  创建私人房间                        │
-│  - /enter_private_room   加入私人房间                        │
-│  - /match/start          开始匹配                            │
-│  - /match/cancel         取消匹配                            │
-│  - /get_user_room        获取用户房间状态                    │
-├─────────────────────────────────────────────────────────────┤
-│  内部功能:                                                   │
-│  - 6位数字房间号生成 (100000-999999)                         │
-│  - GameServer 负载均衡                                       │
-│  - 匹配队列管理                                              │
-│  - 房间位置缓存                                              │
-└─────────────────────────────────────────────────────────────┘
+### 单机模式 (默认)
+- 使用内存缓存
+- 无需 Redis
+- 适合开发和小规模部署
+
+### 集群模式
+- 使用 Redis 共享状态
+- 支持多实例水平扩展
+- 配置 `redis.host` 启用
+
+```yaml
+# application.yml
+redis:
+  host: localhost
+  port: 6379
 ```
 
 ## 架构
 
 ```
-                    ┌─────────────────┐
-                    │   Hall Server   │
-                    │     (8201)      │
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-        ▼                    ▼                    ▼
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│  serverMap    │    │  matchQueues  │    │    cache      │
-│               │    │               │    │               │
-│ id → Server   │    │ queue → users │    │ room → server │
-│ 负载均衡选择   │    │ 定时匹配处理  │    │ user → room   │
-└───────────────┘    └───────────────┘    └───────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      HallServer (8201)                      │
+├─────────────────────────────────────────────────────────────┤
+│  对外接口 (客户端)                                           │
+│  ├── /create_private_room   创建私人房间                    │
+│  ├── /enter_private_room    加入私人房间                    │
+│  ├── /match/start           开始匹配                        │
+│  ├── /match/cancel          取消匹配                        │
+│  └── /get_user_room         获取用户房间状态                 │
+├─────────────────────────────────────────────────────────────┤
+│  内部接口 (GameServer)                                       │
+│  ├── /register_gs           GameServer 注册                 │
+│  ├── /heartbeat             心跳上报负载                     │
+│  └── /room_destroyed        房间销毁通知                     │
+├─────────────────────────────────────────────────────────────┤
+│  数据存储 (CachePlugin)                                      │
+│  ├── 单机: MemoryCachePlugin                                │
+│  └── 集群: RedisCachePlugin                                 │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Redis (集群)   │ ◄── 游戏配置由 AccountServer 写入
+│  或 内存 (单机) │
+└─────────────────┘
 ```
 
-## 配置
+## 集群数据流
 
-`src/main/resources/application.yml`:
-```yaml
-server:
-  httpPort: 8201
-  priKey: ROOM_PRI_KEY_2024   # 签名密钥
-
-# 可选 Redis (用于集群部署)
-# redis:
-#   host: localhost
-#   port: 6379
+```
+AccountServer                    Redis                      HallServer
+     │                            │                            │
+     │ 启动时同步配置              │                            │
+     │ ─────────────────────────► │                            │
+     │  hall:config:doudizhu:normal = 3                        │
+     │  hall:config:mahjong:normal = 4                         │
+     │                            │                            │
+     │                            │ ◄───────────────────────── │
+     │                            │   读取配置                  │
+     │                            │                            │
+     │                            │ ◄───────────────────────── │
+     │                            │   存储匹配队列/房间状态     │
 ```
 
-## API
+## 核心功能
 
-### GameServer 接口
+### 1. GameServer 注册与负载均衡
 
-#### 注册 GameServer
 ```
-GET /register_gs?clientip={ip}&clientport={wsPort}&httpPort={httpPort}&load={load}&gameType={type}
-
-响应: {"code": 0, "data": {"ip": "实际IP"}}
+GameServer 启动
+      │
+      ▼
+GET /register_gs?clientip=x&clientport=9100&httpPort=9101&gameType=doudizhu
+      │
+      ▼
+HallServer 记录服务器信息
+      │
+      ▼
+每 5 秒心跳: GET /heartbeat?id=xxx&load=65
+      │
+      ▼
+创建房间时选择 load 最低的服务器
 ```
 
-#### 心跳
+负载计算: `load = rooms * 10 + players`
+
+### 2. 6位数字房间号
+
+- 范围: 100000 - 999999
+- 便于玩家口头分享
+- 自动检测冲突，循环使用
+
+### 3. 匹配系统
+
 ```
-GET /heartbeat?id={serverId}&load={load}
-
-响应: {"code": 0}
+玩家 A ──► /match/start ──► 加入队列 "doudizhu:normal"
+玩家 B ──► /match/start ──► 加入队列 "doudizhu:normal"
+玩家 C ──► /match/start ──► 加入队列 "doudizhu:normal"
+                                    │
+                                    ▼ 人数足够 (3人)
+                              创建房间，返回 token
 ```
 
-### 客户端接口
+队列配置从 AccountServer `/room/config` 动态获取。
 
-#### 创建私人房间
-```
-GET /create_private_room?userId={userId}&gameType={type}&conf={}
+## API 接口
 
-响应: {
+### 创建私人房间
+```http
+GET /create_private_room?userId=10001&gameType=doudizhu&conf={}
+
+Response:
+{
   "code": 0,
   "data": {
-    "roomid": "123456",    // 6位房间号
+    "roomid": "123456",
     "ip": "192.168.1.100",
     "port": 9100,
     "token": "xxx",
@@ -98,130 +129,77 @@ GET /create_private_room?userId={userId}&gameType={type}&conf={}
 }
 ```
 
-#### 加入私人房间
-```
-GET /enter_private_room?userId={userId}&roomId={roomId}&name={name}
+### 加入私人房间
+```http
+GET /enter_private_room?userId=10002&roomId=123456&name=玩家2
 
-响应: 同上
+Response: (同上)
 ```
 
-#### 开始匹配
-```
+### 开始匹配
+```http
 POST /match/start
+Content-Type: application/json
+
 {
-  "userId": 1001,
+  "userId": 10001,
   "gameType": "doudizhu",
   "level": "normal",
   "name": "玩家名"
 }
 
-响应 (匹配成功):
+Response (匹配成功):
 {
   "code": 0,
   "data": {
     "status": "matched",
     "roomid": "234567",
-    "ip": "...",
+    "ip": "192.168.1.100",
     "port": 9100,
     "token": "xxx"
   }
 }
 
-响应 (等待中):
-{"code": 0, "data": {"status": "matching"}}
+Response (等待中):
+{
+  "code": 0,
+  "data": {"status": "matching"}
+}
 ```
 
-#### 取消匹配
-```
+### 取消匹配
+```http
 POST /match/cancel
-{"userId": 1001}
+Content-Type: application/json
+
+{"userId": 10001}
+
+Response:
+{"code": 0}
 ```
 
 ### 管理接口
-
-```
-GET /admin/servers       # 所有 GameServer 状态
-GET /admin/match_queues  # 匹配队列状态
-POST /admin/clear_room   # 强制清理房间
+```http
+GET /admin/servers        # 查看所有 GameServer 状态
+GET /admin/match_queues   # 查看匹配队列状态
 ```
 
-## 负载均衡
+## 配置文件
 
-### 选择策略
+`src/main/resources/application.yml`:
+```yaml
+server:
+  id: hall-1
+  httpPort: 8201
+  priKey: ROOM_PRI_KEY_2024   # 签名密钥
 
-```java
-ServerInfo chooseServer(String gameType) {
-    1. 过滤超时服务器 (60秒无心跳)
-    2. 过滤 gameType 匹配的服务器
-    3. 选择 load 最低的服务器
-}
-```
+account:
+  url: http://localhost:8101  # AccountServer 地址
 
-### 负载计算
-
-GameServer 上报: `load = rooms * 10 + players`
-
-示例:
-- 服务器 A: 5 个房间, 15 个玩家 → load = 65
-- 服务器 B: 3 个房间, 9 个玩家 → load = 39
-- 选择服务器 B
-
-## 房间号生成
-
-```java
-// 6位数字房间号 (100000-999999)
-private String generateRoomId() {
-    for (int i = 0; i < 100; i++) {
-        long counter = roomIdCounter.incrementAndGet();
-        long roomNum = 100000 + (counter % 900000);
-        String roomId = String.valueOf(roomNum);
-        
-        // 检查是否已被占用
-        if (cache.get(KEY_ROOM_SERVER + roomId) == null) {
-            return roomId;
-        }
-    }
-    // 降级到 UUID
-    return UUID.randomUUID().toString().substring(0, 8);
-}
-```
-
-## 匹配队列
-
-### 队列配置
-
-```java
-queueConfigs.put("doudizhu:normal", 3);  // 斗地主 3 人
-queueConfigs.put("mahjong:normal", 4);   // 麻将 4 人
-queueConfigs.put("gobang:normal", 2);    // 五子棋 2 人
-```
-
-### 匹配流程
-
-```
-1. 玩家调用 /match/start
-2. 加入对应队列 (gameType:level)
-3. 同步等待最多 5 秒
-4. 后台每秒检查队列:
-   - 人数足够 → 创建房间 → 通知所有玩家
-   - 人数不够 → 继续等待
-5. 超时返回 {status: "matching"}
-6. 客户端可再次调用继续等待
-```
-
-## 签名验证
-
-Hall ↔ GameServer 通信使用 MD5 签名:
-
-```java
-// 创建房间
-sign = md5(userId + roomId + conf + ROOM_PRI_KEY)
-
-// 进入房间
-sign = md5(userId + name + roomId + ROOM_PRI_KEY)
-
-// 检查房间
-sign = md5(roomId + ROOM_PRI_KEY)
+# 可选 Redis (集群部署时使用)
+# redis:
+#   host: localhost
+#   port: 6379
 ```
 
 ## 启动
@@ -230,9 +208,7 @@ sign = md5(roomId + ROOM_PRI_KEY)
 mvn exec:java -pl hall-server -Dexec.mainClass=game.hall.HallServer
 ```
 
-## 独立性
-
-Hall Server 不依赖 room-game-common，只依赖 litejava-plugins:
+## 依赖
 
 ```xml
 <dependencies>
@@ -243,7 +219,4 @@ Hall Server 不依赖 room-game-common，只依赖 litejava-plugins:
 </dependencies>
 ```
 
-这意味着:
-- 可以独立部署和扩展
-- 不关心具体游戏逻辑
-- 只负责路由和调度
+**注意**: HallServer 不依赖 `game-core`，与游戏逻辑完全解耦。

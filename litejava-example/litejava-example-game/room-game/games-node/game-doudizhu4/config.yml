@@ -1,0 +1,13 @@
+server:
+  id: doudizhu4-node-1
+  wsPort: 9700
+  httpPort: 9701
+  clientip: localhost
+
+game:
+  type: doudizhu4
+  maxPlayers: 4
+
+hall:
+  url: http://localhost:8201
+  priKey: ROOM_PRI_KEY_2024

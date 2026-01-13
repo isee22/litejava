@@ -1,0 +1,13 @@
+server:
+  id: mahjong-1
+  wsPort: 9300
+  httpPort: 9301
+  # 对外地址 - 客户端通过这个地址连接，生产环境可能需要改成公网IP
+  clientip: localhost
+
+game:
+  type: mahjong
+  maxPlayers: 4
+
+hall:
+  url: http://localhost:8201

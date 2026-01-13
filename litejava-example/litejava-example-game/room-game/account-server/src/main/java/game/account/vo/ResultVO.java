@@ -10,3 +10,4 @@ public class ResultVO {
         this.msg = msg;
     }
 }
+

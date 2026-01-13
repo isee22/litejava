@@ -9,3 +9,4 @@ public class ChatSendReqVO {
     public String content;
     public long toId;
 }
+

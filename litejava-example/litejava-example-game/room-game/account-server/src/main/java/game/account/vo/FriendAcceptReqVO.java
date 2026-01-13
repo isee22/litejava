@@ -7,3 +7,4 @@ public class FriendAcceptReqVO {
     public long userId;
     public long requestId;
 }
+

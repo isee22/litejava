@@ -16,7 +16,14 @@
     <description>账号服务器 - 登录/玩家数据/好友/排行榜/商城 (独立服务)</description>
     
     <dependencies>
-        <!-- 只依赖 litejava-plugins，不依赖 room-game-common -->
+        <!-- 公共模块 -->
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>room-game-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- litejava-plugins -->
         <dependency>
             <groupId>litejava</groupId>
             <artifactId>litejava-plugins</artifactId>
@@ -45,11 +52,25 @@
             <scope>runtime</scope>
         </dependency>
         
+        <!-- JPA API (仅注解，不含实现) -->
+        <dependency>
+            <groupId>javax.persistence</groupId>
+            <artifactId>javax.persistence-api</artifactId>
+            <version>2.2</version>
+        </dependency>
+        
         <!-- Redis 连接池 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>
             <version>2.11.1</version>
+        </dependency>
+        
+        <!-- Redis (集群模式) -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
         </dependency>
     </dependencies>
 </project>

@@ -4,20 +4,16 @@ server:
 
 app:
   version: "1.0.0"
-  web: ""
   priKey: game_secret_key
 
-hall:
-  ip: localhost
-  port: 7100
-
+# Redis 配置 (集群模式)
 redis:
   host: localhost
   port: 6379
-  password: 
+  password:
 
 mybatis:
-  url: jdbc:mysql://localhost:3306/game?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
+  url: jdbc:mysql://localhost:3306/game?useSSL=false&serverTimezone=UTC&characterEncoding=utf8&allowPublicKeyRetrieval=true
   username: root
   password: 123456
   poolMaxSize: 10

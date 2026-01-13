@@ -110,6 +110,135 @@ List<User> users = UserService.findAll();
 ctx.ok(ListResult.of(users));
 ```
 
+## MVC 分层架构
+
+采用经典 MVC 分层，各层职责明确：
+
+### 层级职责
+
+| 层级 | 职责 | 依赖 |
+|------|------|------|
+| Controller | 接收请求、参数校验、调用 Service、返回响应 | Service |
+| Service | 业务逻辑、事务控制、调用 DAO | DAO |
+| DAO | 数据访问、操作缓存和 Mapper | Cache, Mapper |
+
+### 调用规则
+
+```
+Controller → Service → DAO → Cache / Mapper (MyBatis)
+     ↓           ↓         ↓
+    VO          PO        PO
+```
+
+- Controller 只能调用 Service，不能直接操作 DAO
+- Service 只能调用 DAO，不能直接操作 Cache/Mapper
+- DAO 负责操作缓存 (Redis) 和数据库 (MyBatis Mapper)
+
+### 数据对象规范
+
+| 类型 | 说明 | 位置 | 命名规则 |
+|------|------|------|----------|
+| Entity | 数据库表映射对象 | `entity/` | 不带后缀，如 `User` |
+| VO (View Object) | 对外返回的视图对象 | `vo/` | 带 VO 后缀，如 `UserVO` |
+
+```java
+// Entity - 对应数据库表，不带后缀
+public class User {
+    public Long id;
+    public String username;
+    public String password;  // 敏感字段
+    public Date createTime;
+}
+
+// VO - 对外返回，带 VO 后缀
+public class UserVO {
+    public Long id;
+    public String username;
+    public String nickname;
+    // 不暴露 password
+    
+    // VO 可以包含 Entity 或从 Entity 转换
+    public static UserVO from(User user) {
+        UserVO vo = new UserVO();
+        vo.id = user.id;
+        vo.username = user.username;
+        return vo;
+    }
+}
+```
+
+### 包结构示例
+
+```
+com.example.user/
+├── controller/
+│   └── UserController.java
+├── service/
+│   └── UserService.java
+├── dao/
+│   └── UserDAO.java          # DAO 内部直接操作缓存和 Mapper
+├── mapper/
+│   └── UserMapper.java
+├── entity/
+│   └── User.java
+└── vo/
+    └── UserVO.java
+```
+
+> DAO 直接集成缓存操作，无需单独 cache 包
+
+### 代码示例
+
+```java
+// Controller - 只调用 Service
+public class UserController {
+    private UserService userService;
+    
+    public void getUser(Context ctx) {
+        Long userId = ctx.pathLong("id");
+        UserVO user = userService.getUserById(userId);
+        if (user == null) {
+            return ctx.fail(404, "用户不存在");
+        }
+        ctx.ok(user);
+    }
+}
+
+// Service - 只调用 DAO，处理业务逻辑
+public class UserService {
+    private UserDAO userDAO;
+    
+    public UserVO getUserById(Long id) {
+        User user = userDAO.findById(id);
+        if (user == null) {
+            return null;
+        }
+        return UserVO.from(user);
+    }
+}
+
+// DAO - 操作缓存和 Mapper
+public class UserDAO {
+    private RedisCachePlugin cache;
+    private UserMapper mapper;
+    
+    public User findById(Long id) {
+        // 先查缓存
+        String key = "user:" + id;
+        User user = cache.get(key, User.class);
+        if (user != null) {
+            return user;
+        }
+        // 缓存未命中，查数据库
+        user = mapper.selectById(id);
+        if (user != null) {
+            cache.set(key, user, 3600);
+        }
+        return user;
+    }
+}
+```
+
 ## room-game 架构 (BabyKylin 模式)
 
 采用 HTTP + WebSocket 分离架构：

@@ -17,3 +17,4 @@ public class AuthLoginRespVO {
     public int signDay;
     public boolean todaySigned;
 }
+

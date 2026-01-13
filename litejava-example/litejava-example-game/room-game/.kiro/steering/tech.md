@@ -1,7 +1,9 @@
 # Tech Stack
 
 ## Backend
-- Java 21
+- Java 21 (主要语言)
+- Go 1.21+ (game-mahjong2-go)
+- Node.js 18+ (game-doudizhu4-node)
 - LiteJava (custom lightweight framework)
 - MyBatis + MySQL (lobby-server only)
 - WebSocket + JSON for real-time communication
@@ -32,15 +34,20 @@ mvn exec:java -pl account-server -Dexec.mainClass=game.account.AccountServer
 # Hall Server
 mvn exec:java -pl hall-server -Dexec.mainClass=game.hall.HallServer
 
-# Game Servers (examples)
-mvn exec:java -pl game-doudizhu -Dexec.mainClass=game.doudizhu.DoudizhuServer
-mvn exec:java -pl game-gobang -Dexec.mainClass=game.gobang.GobangServer
-mvn exec:java -pl game-mahjong -Dexec.mainClass=game.mahjong.MahjongServer
+# Game Servers - Java
+mvn exec:java -pl games-java/game-doudizhu -Dexec.mainClass=game.doudizhu.DoudizhuServer
+mvn exec:java -pl games-java/game-gobang -Dexec.mainClass=game.gobang.GobangServer
+
+# Game Servers - Go
+cd games-go/game-mahjong2 && go run .
+
+# Game Servers - Node.js
+cd games-node/game-doudizhu4 && npm install && npm start
 ```
 
 ### Run with Custom Ports (for scaling)
 ```bash
-mvn exec:java -pl game-doudizhu -Dserver.id=ddz-2 -Dserver.wsPort=9102 -Dserver.httpPort=9103
+mvn exec:java -pl games/game-doudizhu -Dserver.id=ddz-2 -Dserver.wsPort=9102 -Dserver.httpPort=9103
 ```
 
 ### Frontend
@@ -59,7 +66,7 @@ start-all.cmd    # CMD
 
 ## Key Dependencies
 - `litejava-plugins`: Core framework with WebSocket support
-- `room-game-common`: Shared code (Cmd, GameServer base class, VOs)
+- `game-core`: Shared code (Cmd, GameServer base class, VOs)
 - `snakeyaml`: YAML configuration
 - `jackson-databind`: JSON serialization
 - `HikariCP` + `mybatis` + `mysql-connector-j`: Database (lobby only)

@@ -7,3 +7,4 @@ public class WorldChatReqVO {
     public long userId;
     public String content;
 }
+

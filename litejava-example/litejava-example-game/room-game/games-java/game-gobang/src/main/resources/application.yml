@@ -1,0 +1,13 @@
+server:
+  id: gobang-1
+  wsPort: 9200
+  httpPort: 9201
+  # 对外地址 - 客户端通过这个地址连接，生产环境可能需要改成公网IP
+  clientip: localhost
+
+game:
+  type: gobang
+  maxPlayers: 2
+
+hall:
+  url: http://localhost:8201

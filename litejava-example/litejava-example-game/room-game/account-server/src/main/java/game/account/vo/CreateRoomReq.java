@@ -7,3 +7,4 @@ public class CreateRoomReq {
     public String gameType;
     public Map<String, Object> conf;  // 房间配置 (可选)
 }
+

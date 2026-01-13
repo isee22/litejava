@@ -1,6 +1,5 @@
 package litejava.plugins.cache;
 
-import litejava.Plugin;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
@@ -39,7 +38,7 @@ import java.util.function.Supplier;
  * String stock = cache.hget("product:1", "stock");
  * }</pre>
  */
-public class RedisCachePlugin extends Plugin {
+public class RedisCachePlugin extends CachePlugin {
     
     public String host = "localhost";
     public int port = 6379;
@@ -70,44 +69,96 @@ public class RedisCachePlugin extends Plugin {
         config.setMaxWait(Duration.ofMillis(timeout));
         config.setTestOnBorrow(true);
         
-        if (password != null && !password.isEmpty()) {
-            pool = new JedisPool(config, host, port, timeout, password, database);
-        } else {
-            pool = new JedisPool(config, host, port, timeout, null, database);
+        // 重试连接 Redis，直到成功
+        int retryCount = 0;
+        while (true) {
+            try {
+                if (password != null && !password.isEmpty()) {
+                    pool = new JedisPool(config, host, port, timeout, password, database);
+                } else {
+                    pool = new JedisPool(config, host, port, timeout, null, database);
+                }
+                
+                // 测试连接
+                try (Jedis jedis = pool.getResource()) {
+                    jedis.ping();
+                }
+                
+                app.log.info("[RedisCache] 已连接: " + host + ":" + port + "/" + database);
+                break;  // 连接成功，退出循环
+            } catch (Exception e) {
+                retryCount++;
+                int waitSeconds = Math.min(retryCount * 2, 30);  // 最多等待30秒
+                app.log.warn("[RedisCache] 连接失败 (第" + retryCount + "次), " + waitSeconds + "秒后重试: " + e.getMessage());
+                
+                if (pool != null) {
+                    try { pool.close(); } catch (Exception ignored) {}
+                    pool = null;
+                }
+                
+                try {
+                    Thread.sleep(waitSeconds * 1000L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Redis 连接被中断", ie);
+                }
+            }
         }
-        
-        app.log.info("[RedisCache] 已连接: " + host + ":" + port + "/" + database);
     }
     
-    // ==================== String 操作 ====================
+    // ==================== CachePlugin 抽象方法实现 ====================
     
-    public void set(String key, String value) {
+    @Override
+    public void set(String key, Object value, int ttlSeconds) {
+        String json = (value instanceof String) ? (String) value : app.json.stringify(value);
         try (Jedis jedis = pool.getResource()) {
-            jedis.set(key, value);
+            if (ttlSeconds > 0) {
+                jedis.setex(key, ttlSeconds, json);
+            } else {
+                jedis.set(key, json);
+            }
         }
     }
     
-    public void set(String key, String value, int expireSeconds) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T get(String key) {
         try (Jedis jedis = pool.getResource()) {
-            jedis.setex(key, expireSeconds, value);
+            return (T) jedis.get(key);
         }
     }
     
-    public String get(String key) {
-        try (Jedis jedis = pool.getResource()) {
-            return jedis.get(key);
-        }
-    }
-    
+    @Override
     public void del(String key) {
         try (Jedis jedis = pool.getResource()) {
             jedis.del(key);
         }
     }
     
+    @Override
     public boolean exists(String key) {
         try (Jedis jedis = pool.getResource()) {
             return jedis.exists(key);
+        }
+    }
+    
+    // ==================== String 操作 (便捷方法) ====================
+    
+    public void setString(String key, String value) {
+        try (Jedis jedis = pool.getResource()) {
+            jedis.set(key, value);
+        }
+    }
+    
+    public void setString(String key, String value, int expireSeconds) {
+        try (Jedis jedis = pool.getResource()) {
+            jedis.setex(key, expireSeconds, value);
+        }
+    }
+    
+    public String getString(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.get(key);
         }
     }
     
@@ -183,6 +234,7 @@ public class RedisCachePlugin extends Plugin {
     
     // ==================== 计数器 ====================
     
+    @Override
     public long incr(String key) {
         try (Jedis jedis = pool.getResource()) {
             return jedis.incr(key);
@@ -198,6 +250,157 @@ public class RedisCachePlugin extends Plugin {
     public long decr(String key) {
         try (Jedis jedis = pool.getResource()) {
             return jedis.decr(key);
+        }
+    }
+    
+    // ==================== List 操作 ====================
+    
+    @Override
+    public void rpush(String key, String value) {
+        try (Jedis jedis = pool.getResource()) {
+            jedis.rpush(key, value);
+        }
+    }
+    
+    @Override
+    public void lpush(String key, String value) {
+        try (Jedis jedis = pool.getResource()) {
+            jedis.lpush(key, value);
+        }
+    }
+    
+    @Override
+    public String lpop(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.lpop(key);
+        }
+    }
+    
+    @Override
+    public long llen(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.llen(key);
+        }
+    }
+    
+    @Override
+    public void lrem(String key, String value) {
+        try (Jedis jedis = pool.getResource()) {
+            jedis.lrem(key, 0, value);
+        }
+    }
+    
+    // ==================== Set 操作 ====================
+    
+    /**
+     * 添加元素到 Set
+     */
+    public long sadd(String key, String... members) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.sadd(key, members);
+        }
+    }
+    
+    /**
+     * 从 Set 移除元素
+     */
+    public long srem(String key, String... members) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.srem(key, members);
+        }
+    }
+    
+    /**
+     * 获取 Set 所有成员
+     */
+    public java.util.Set<String> smembers(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.smembers(key);
+        }
+    }
+    
+    /**
+     * 检查元素是否在 Set 中
+     */
+    public boolean sismember(String key, String member) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.sismember(key, member);
+        }
+    }
+    
+    /**
+     * 获取 Set 大小
+     */
+    public long scard(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.scard(key);
+        }
+    }
+    
+    // ==================== Sorted Set 操作 ====================
+    
+    /**
+     * 添加元素到 Sorted Set
+     */
+    public long zadd(String key, double score, String member) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.zadd(key, score, member);
+        }
+    }
+    
+    /**
+     * 添加元素到 Sorted Set (使用 long 作为 score)
+     */
+    public long zadd(String key, long userId, long score) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.zadd(key, score, String.valueOf(userId));
+        }
+    }
+    
+    /**
+     * 从 Sorted Set 移除元素
+     */
+    public long zrem(String key, String... members) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.zrem(key, members);
+        }
+    }
+    
+    /**
+     * 获取 Sorted Set 范围内的元素 (按索引)
+     */
+    public java.util.Set<String> zrange(String key, long start, long stop) {
+        try (Jedis jedis = pool.getResource()) {
+            java.util.List<String> list = jedis.zrange(key, start, stop);
+            return new java.util.LinkedHashSet<>(list);
+        }
+    }
+    
+    /**
+     * 获取 Sorted Set 范围内的元素 (按分数)
+     */
+    public java.util.Set<String> zrangeByScore(String key, double min, double max) {
+        try (Jedis jedis = pool.getResource()) {
+            java.util.List<String> list = jedis.zrangeByScore(key, min, max);
+            return new java.util.LinkedHashSet<>(list);
+        }
+    }
+    
+    /**
+     * 获取元素的分数
+     */
+    public Double zscore(String key, String member) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.zscore(key, member);
+        }
+    }
+    
+    /**
+     * 获取 Sorted Set 大小
+     */
+    public long zcard(String key) {
+        try (Jedis jedis = pool.getResource()) {
+            return jedis.zcard(key);
         }
     }
     
@@ -253,6 +456,31 @@ public class RedisCachePlugin extends Plugin {
         } finally {
             unlock(key);
         }
+    }
+    
+    // ==================== Key 扫描 ====================
+    
+    /**
+     * 扫描匹配的 key（使用 SCAN 命令，生产环境安全）
+     * 
+     * @param pattern 匹配模式，如 "hall:room:*"
+     * @return 匹配的 key 列表
+     */
+    public java.util.List<String> keys(String pattern) {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        try (Jedis jedis = pool.getResource()) {
+            String cursor = "0";
+            redis.clients.jedis.params.ScanParams params = new redis.clients.jedis.params.ScanParams()
+                .match(pattern)
+                .count(100);
+            
+            do {
+                redis.clients.jedis.resps.ScanResult<String> scanResult = jedis.scan(cursor, params);
+                result.addAll(scanResult.getResult());
+                cursor = scanResult.getCursor();
+            } while (!"0".equals(cursor));
+        }
+        return result;
     }
     
     // ==================== 原生 Jedis ====================

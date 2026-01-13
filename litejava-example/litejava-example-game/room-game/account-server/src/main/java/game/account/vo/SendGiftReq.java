@@ -6,3 +6,4 @@ public class SendGiftReq {
     public int giftId;
     public int count = 1;
 }
+

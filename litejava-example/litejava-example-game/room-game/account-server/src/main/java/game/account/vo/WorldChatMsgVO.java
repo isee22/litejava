@@ -11,3 +11,4 @@ public class WorldChatMsgVO {
     public String content;
     public long time;
 }
+

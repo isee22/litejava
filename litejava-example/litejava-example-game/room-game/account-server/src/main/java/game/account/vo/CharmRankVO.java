@@ -9,3 +9,4 @@ public class CharmRankVO {
     public String name;
     public int charm;
 }
+

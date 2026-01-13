@@ -3,6 +3,8 @@ package litejava.plugins.cache;
 import net.spy.memcached.MemcachedClient;
 
 import java.net.InetSocketAddress;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Memcache 缓存插件 - 基于 spymemcached 实现
@@ -92,6 +94,46 @@ public class MemcacheCachePlugin extends CachePlugin {
     @Override
     public boolean exists(String key) {
         return client.get(key(key)) != null;
+    }
+    
+    @Override
+    public long incr(String key) {
+        return client.incr(key(key), 1, 1);
+    }
+    
+    // ==================== List 操作 (内存模拟，Memcache 不支持) ====================
+    
+    private final Map<String, LinkedList<String>> lists = new ConcurrentHashMap<>();
+    
+    @Override
+    public void rpush(String key, String value) {
+        lists.computeIfAbsent(key(key), x -> new LinkedList<>()).addLast(value);
+    }
+    
+    @Override
+    public void lpush(String key, String value) {
+        lists.computeIfAbsent(key(key), x -> new LinkedList<>()).addFirst(value);
+    }
+    
+    @Override
+    public String lpop(String key) {
+        LinkedList<String> list = lists.get(key(key));
+        if (list == null || list.isEmpty()) return null;
+        return list.pollFirst();
+    }
+    
+    @Override
+    public long llen(String key) {
+        LinkedList<String> list = lists.get(key(key));
+        return list != null ? list.size() : 0;
+    }
+    
+    @Override
+    public void lrem(String key, String value) {
+        LinkedList<String> list = lists.get(key(key));
+        if (list != null) {
+            list.remove(value);
+        }
     }
     
     // ==================== JSON 序列化 ====================

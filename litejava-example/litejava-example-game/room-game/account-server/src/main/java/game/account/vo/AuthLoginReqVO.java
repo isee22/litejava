@@ -7,3 +7,4 @@ public class AuthLoginReqVO {
     public Long userId;
     public String name;
 }
+

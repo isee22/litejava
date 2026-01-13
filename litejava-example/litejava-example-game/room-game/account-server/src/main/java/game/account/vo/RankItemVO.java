@@ -13,3 +13,4 @@ public class RankItemVO {
     public int exp;    // 用于等级榜
     public int charm;  // 用于魅力榜
 }
+

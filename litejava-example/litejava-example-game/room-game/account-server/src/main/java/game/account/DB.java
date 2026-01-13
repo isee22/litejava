@@ -13,3 +13,4 @@ public class DB {
         return MyBatisPlugin.instance.execute(mapperClass, action);
     }
 }
+

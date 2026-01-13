@@ -1,0 +1,15 @@
+# 狼人杀游戏服务器配置
+
+server:
+  id: werewolf-1
+  wsPort: 9600
+  httpPort: 9601
+  # 对外地址 - 客户端通过这个地址连接，生产环境可能需要改成公网IP
+  clientip: localhost
+
+game:
+  type: werewolf
+  maxPlayers: 8
+
+hall:
+  url: http://localhost:8201

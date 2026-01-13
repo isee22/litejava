@@ -1,0 +1,16 @@
+server:
+  id: doudizhu-1
+  wsPort: 9100
+  httpPort: 9101
+  # 对外地址 - 客户端通过这个地址连接，生产环境可能需要改成公网IP
+  clientip: localhost
+
+game:
+  type: doudizhu
+  maxPlayers: 3
+
+hall:
+  url: http://localhost:8201
+
+account:
+  url: http://localhost:8101

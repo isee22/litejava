@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS player_item (
 CREATE TABLE IF NOT EXISTS room_config (
     id INT AUTO_INCREMENT PRIMARY KEY,
     game_type VARCHAR(32) NOT NULL,
-    room_level VARCHAR(32) NOT NULL,
+    room_level INT NOT NULL COMMENT '1=初级, 2=中级, 3=高级, 4=大师',
     room_name VARCHAR(64) NOT NULL,
     min_players INT NOT NULL DEFAULT 2,
     max_players INT NOT NULL DEFAULT 4,
@@ -130,10 +130,25 @@ INSERT IGNORE INTO sign_in_config (day, rewardType, rewardAmount, description) V
 
 -- 初始化房间配置
 INSERT IGNORE INTO room_config (game_type, room_level, room_name, min_players, max_players, min_coins, base_score, round_time, match_timeout, status, create_time, update_time) VALUES
-('doudizhu', 'beginner', '初级场', 3, 3, 1000, 10, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
-('doudizhu', 'intermediate', '中级场', 3, 3, 50000, 50, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
-('gobang', 'beginner', '初级场', 2, 2, 0, 10, 60, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
-('mahjong', 'beginner', '初级场', 4, 4, 1000, 1, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000);
+-- 斗地主 (Java)
+('doudizhu', 1, '初级场', 3, 3, 1000, 10, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('doudizhu', 2, '中级场', 3, 3, 50000, 50, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('doudizhu', 3, '高级场', 3, 3, 200000, 200, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+-- 五子棋
+('gobang', 1, '初级场', 2, 2, 0, 10, 60, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('gobang', 2, '中级场', 2, 2, 10000, 50, 60, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+-- 麻将
+('mahjong', 1, '初级场', 4, 4, 1000, 1, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('mahjong', 2, '中级场', 4, 4, 50000, 5, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+-- 麻将2 (Go)
+('mahjong2', 1, '初级场', 4, 4, 1000, 1, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('mahjong2', 2, '中级场', 4, 4, 10000, 5, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+-- 4人斗地主 (Node)
+('doudizhu4', 1, '初级场', 4, 4, 1000, 10, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('doudizhu4', 2, '中级场', 4, 4, 50000, 50, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+-- 德州扑克
+('texas', 1, '初级场', 2, 9, 1000, 5, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000),
+('texas', 2, '中级场', 2, 9, 50000, 25, 30, 60, 1, UNIX_TIMESTAMP()*1000, UNIX_TIMESTAMP()*1000);
 
 -- 初始化物品配置
 INSERT IGNORE INTO item_config (item_id, name, type, `desc`, price, coin_price, duration, effect) VALUES
@@ -148,4 +163,5 @@ INSERT IGNORE INTO item_config (item_id, name, type, `desc`, price, coin_price, 
 (3001, '表情包-基础', 'emoji', '解锁基础表情', 50, 5000, 0, '{"pack":"basic"}'),
 (3002, '表情包-搞笑', 'emoji', '解锁搞笑表情', 100, 0, 0, '{"pack":"funny"}'),
 (4001, '小喇叭', 'horn', '全服广播消息', 5, 500, 0, null),
-(4002, '大喇叭', 'horn_vip', '全服广播消息(带特效)', 20, 0, 0, '{"effect":"golden"}');
+(4002, '大喇叭', 'horn_vip', '全服广播消息(带特效)', 20, 0, 0, '{"effect":"golden"}'),
+(5001, '房卡', 'room_card', '创建私人房间消耗', 1, 100, 0, null);

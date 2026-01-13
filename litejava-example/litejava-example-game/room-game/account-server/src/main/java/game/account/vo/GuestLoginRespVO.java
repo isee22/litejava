@@ -8,3 +8,4 @@ public class GuestLoginRespVO {
     public String halladdr;
     public String sign;
 }
+

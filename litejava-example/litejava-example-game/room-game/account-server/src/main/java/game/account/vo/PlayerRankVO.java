@@ -12,3 +12,4 @@ public class PlayerRankVO {
         this.rank = rank;
     }
 }
+

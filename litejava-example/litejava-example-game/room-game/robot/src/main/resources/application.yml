@@ -1,0 +1,13 @@
+server:
+  httpPort: 8900
+
+# BabyKylin 模式: 只需要 HallServer 地址
+hall:
+  httpUrl: http://localhost:8201
+  accountPriKey: ACCOUNT_PRI_KEY_2024
+
+# 机器人配置
+robot:
+  count: 100
+  gameType: doudizhu
+  level: 1

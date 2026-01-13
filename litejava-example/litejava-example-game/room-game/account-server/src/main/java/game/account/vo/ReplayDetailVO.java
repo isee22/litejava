@@ -15,3 +15,4 @@ public class ReplayDetailVO {
     public Map<String, Object> initState;
     public List<ReplayActionVO> actions;
 }
+

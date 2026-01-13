@@ -88,7 +88,10 @@ public class MyBatisPlugin extends Plugin {
         Configuration configuration = new Configuration();
         configuration.setEnvironment(new Environment("default", 
             new JdbcTransactionFactory(), dataSource));
-        configuration.setMapUnderscoreToCamelCase(true);
+        
+        // 是否开启下划线转驼峰 (默认关闭，数据库列名与 entity 字段名一致)
+        String camelCase = app.conf.getString("mybatis", "mapUnderscoreToCamelCase", "false");
+        configuration.setMapUnderscoreToCamelCase("true".equalsIgnoreCase(camelCase));
         
         // 从配置文件注册 mapper 包
         String mapperPackage = app.conf.getString("mybatis", "mapperPackage", null);

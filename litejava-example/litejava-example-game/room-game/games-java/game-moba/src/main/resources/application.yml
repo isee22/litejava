@@ -1,0 +1,13 @@
+server:
+  id: moba-1
+  wsPort: 9700
+  httpPort: 9701
+  # 对外地址 - 客户端通过这个地址连接，生产环境可能需要改成公网IP
+  clientip: localhost
+
+game:
+  type: moba
+  maxPlayers: 10
+
+hall:
+  url: http://localhost:8201

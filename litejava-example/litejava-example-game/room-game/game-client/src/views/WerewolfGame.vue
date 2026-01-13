@@ -34,7 +34,6 @@
         <div class="seat-number">{{ index + 1 }}号</div>
         <div class="avatar">{{ player.alive ? '👤' : '💀' }}</div>
         <div class="player-name">{{ player.name || '玩家' + (index + 1) }}</div>
-</template>
         <div class="badges">
           <span v-if="isWolf && wolfSeats.includes(index)" class="wolf-badge">🐺</span>
           <span v-if="player.role !== undefined && gameOver" class="role-badge">

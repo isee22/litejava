@@ -10,9 +10,28 @@ Room Game is a distributed multiplayer game server platform supporting various r
 - AI trusteeship for disconnected players
 - Game replay recording
 
-## Architecture: BabyKylin Mode + Nginx 代理
+## Architecture: HTTP + WebSocket 分离
 
-采用 HTTP + WebSocket 分离架构，所有流量通过 Nginx 代理：
+采用 HTTP + WebSocket 分离架构，支持两种部署模式：
+
+### 开发模式（直连）
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                           客户端                                    │
+│                                                                      │
+│   HTTP 登录 ──────────────────────────► AccountServer (8101)        │
+│   HTTP 匹配/创建房间 ─────────────────► HallServer (8201)           │
+│   WebSocket 游戏 ─────────────────────► GameServer (9100+)          │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+- Web 客户端: Vite 代理 HTTP 请求，WebSocket 直连 GameServer
+- 机器人客户端: 直连各服务端口
+- 无需 Nginx，启动服务即可开发
+
+### 生产模式（Nginx 代理）
 
 ```
 ┌─────────────┐                    ┌─────────────┐
@@ -28,8 +47,12 @@ Room Game is a distributed multiplayer game server platform supporting various r
              └─────────────┘       └─────────────┘       └─────────────┘
 ```
 
+- 统一域名和端口
+- SSL/TLS 终结
+- 负载均衡
+- 静态资源服务
+
 ### 核心原则
-- 客户端只与 Nginx 通信
 - 进入游戏前用 HTTP（登录、创建房间、匹配）
-- 进入游戏后用 WebSocket（通过 Nginx 代理到 GameServer）
-- HallServer 返回游戏服 ip/port，客户端传给 Nginx，Nginx 代理到对应后端
+- 进入游戏后用 WebSocket（直连 GameServer）
+- HallServer 返回 GameServer 的 ip:port，客户端直连

@@ -38,15 +38,65 @@ async function login() {
       return
     }
     
-    const { userId, name } = result.data
+    const { userId, name, roomId, serverId } = result.data
     
     // 保存用户信息
     localStorage.setItem('userId', userId)
     localStorage.setItem('username', username.value)
     localStorage.setItem('playerName', name)
     
+    // 保存房间配置和道具列表
+    if (result.data.roomConfigs) {
+      localStorage.setItem('roomConfigs', JSON.stringify(result.data.roomConfigs))
+    }
+    if (result.data.items) {
+      localStorage.setItem('playerItems', JSON.stringify(result.data.items))
+    }
+    
     userStore.setPlayer(userId, name)
-    showMessage('欢迎回来！')
+    
+    // 检查断线重连
+    if (roomId && serverId) {
+      // 弹出选择框让用户决定是否重连
+      const shouldReconnect = confirm('检测到未完成的游戏，是否重新连接？\n\n点击"确定"重连，点击"取消"放弃游戏')
+      
+      if (shouldReconnect) {
+        showMessage('正在重连...')
+        // 调用 enterRoom 获取新的 token 和签名
+        const reconnectResult = await hallApi.enterRoom(userId, roomId, name)
+        if (reconnectResult.code === 0) {
+          // 重连成功，进入房间
+          const { useGameStore } = await import('../stores/game')
+          const { wsManager } = await import('../utils/websocket')
+          const gameStore = useGameStore()
+          
+          const data = reconnectResult.data
+          const wsUrl = data.wsUrl || `ws://${data.ip}:${data.port}/game`
+          const loginParams = { 
+            token: data.token, 
+            roomid: data.roomId || data.roomid, 
+            time: data.time, 
+            sign: data.sign 
+          }
+          
+          gameStore.setRoom(data.roomId || data.roomid, -1)
+          gameStore.setGameType(data.gameType)
+          
+          await wsManager.connect(wsUrl, loginParams)
+          router.push('/room')
+          return
+        }
+        // 重连失败
+        showMessage('重连失败，进入大厅')
+      } else {
+        // 用户选择不重连，清理房间状态
+        showMessage('已放弃游戏')
+        await hallApi.clearUserRoom(userId)
+      }
+    } else {
+      showMessage('欢迎回来！')
+    }
+    
     router.push('/lobby')
     
   } catch (e) {
@@ -74,6 +124,14 @@ async function register() {
     localStorage.setItem('userId', userId)
     localStorage.setItem('username', username.value)
     localStorage.setItem('playerName', name)
+    
+    // 保存房间配置和道具列表
+    if (result.data.roomConfigs) {
+      localStorage.setItem('roomConfigs', JSON.stringify(result.data.roomConfigs))
+    }
+    if (result.data.items) {
+      localStorage.setItem('playerItems', JSON.stringify(result.data.items))
+    }
     
     userStore.setPlayer(userId, name)
     showMessage('注册成功！')

@@ -382,9 +382,44 @@ public class RouterPlugin extends Plugin {
                             next = new Node();
                             next.path = remaining;
                             child.addChild(next);
+                            next.insert(fullPath, end, handler, method, paramNames, wildcard);
+                        } else {
+                            // 递归处理：remaining 和 next.path 可能有共同前缀
+                            int nextCommon = commonPrefix(next.path, remaining);
+                            if (nextCommon < next.path.length()) {
+                                // 需要分裂 next 节点
+                                Node split = new Node();
+                                split.path = next.path.substring(nextCommon);
+                                split.handlers = next.handlers;
+                                split.children = next.children;
+                                split.paramChild = next.paramChild;
+                                split.wildcardName = next.wildcardName;
+                                split.wildcardHandlers = next.wildcardHandlers;
+                                
+                                next.path = next.path.substring(0, nextCommon);
+                                next.handlers = null;
+                                next.children = null;
+                                next.paramChild = null;
+                                next.wildcardName = null;
+                                next.wildcardHandlers = null;
+                                next.addChild(split);
+                            }
+                            
+                            if (nextCommon < remaining.length()) {
+                                String nextRemaining = remaining.substring(nextCommon);
+                                Node newNode = next.findChild(nextRemaining.charAt(0));
+                                if (newNode == null) {
+                                    newNode = new Node();
+                                    newNode.path = nextRemaining;
+                                    next.addChild(newNode);
+                                }
+                                newNode.insert(fullPath, start + common + nextCommon + nextRemaining.length(), 
+                                              handler, method, paramNames, wildcard);
+                            } else {
+                                next.insert(fullPath, start + common + remaining.length(), 
+                                           handler, method, paramNames, wildcard);
+                            }
                         }
-                        next.insert(fullPath, start + common + remaining.length(), 
-                                   handler, method, paramNames, wildcard);
                     } else {
                         child.insert(fullPath, end, handler, method, paramNames, wildcard);
                     }

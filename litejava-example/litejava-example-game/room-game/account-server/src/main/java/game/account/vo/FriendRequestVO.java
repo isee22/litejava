@@ -12,3 +12,4 @@ public class FriendRequestVO {
     public String message;
     public long createTime;
 }
+

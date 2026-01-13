@@ -16,11 +16,11 @@ start "Hall Server" cmd /c "mvn exec:java -pl hall-server -Dexec.mainClass=game.
 timeout /t 3 /nobreak > nul
 
 echo [3/4] 启动 斗地主服务器 (9100/9101)...
-start "Doudizhu Server" cmd /c "mvn exec:java -pl game-doudizhu -Dexec.mainClass=game.doudizhu.DoudizhuServer -q"
+start "Doudizhu Server" cmd /c "mvn exec:java -pl games-java/game-doudizhu -Dexec.mainClass=game.doudizhu.DoudizhuServer -q"
 timeout /t 2 /nobreak > nul
 
 echo [4/4] 启动 五子棋服务器 (9200/9201)...
-start "Gobang Server" cmd /c "mvn exec:java -pl game-gobang -Dexec.mainClass=game.gobang.GobangServer -q"
+start "Gobang Server" cmd /c "mvn exec:java -pl games-java/game-gobang -Dexec.mainClass=game.gobang.GobangServer -q"
 
 echo.
 echo ========================================

@@ -5,3 +5,4 @@ public class RegisterReq {
     public String password;
     public String name;
 }
+

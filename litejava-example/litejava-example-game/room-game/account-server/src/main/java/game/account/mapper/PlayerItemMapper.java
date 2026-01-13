@@ -1,6 +1,6 @@
 package game.account.mapper;
 
-import game.account.entity.PlayerItemEntity;
+import game.account.entity.PlayerItem;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -8,28 +8,24 @@ import java.util.List;
 @Mapper
 public interface PlayerItemMapper {
     
-    @Select("SELECT id, user_id as userId, item_id as itemId, count, " +
-            "expire_time as expireTime, create_time as createTime, update_time as updateTime " +
-            "FROM player_item WHERE user_id = #{userId}")
-    List<PlayerItemEntity> findByUserId(long userId);
+    @Select("SELECT * FROM player_item WHERE userId = #{userId}")
+    List<PlayerItem> findByUserId(long userId);
     
-    @Select("SELECT id, user_id as userId, item_id as itemId, count, " +
-            "expire_time as expireTime, create_time as createTime, update_time as updateTime " +
-            "FROM player_item WHERE user_id = #{userId} AND item_id = #{itemId}")
-    PlayerItemEntity findByUserAndItem(@Param("userId") long userId, @Param("itemId") int itemId);
+    @Select("SELECT * FROM player_item WHERE userId = #{userId} AND itemId = #{itemId}")
+    PlayerItem findByUserAndItem(@Param("userId") long userId, @Param("itemId") int itemId);
     
-    @Insert("INSERT INTO player_item (user_id, item_id, count, expire_time, create_time, update_time) " +
+    @Insert("INSERT INTO player_item (userId, itemId, count, expireTime, createTime, updateTime) " +
             "VALUES (#{userId}, #{itemId}, #{count}, #{expireTime}, #{createTime}, #{updateTime})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insert(PlayerItemEntity entity);
+    int insert(PlayerItem entity);
     
-    @Update("UPDATE player_item SET count = #{count}, expire_time = #{expireTime}, " +
-            "update_time = #{updateTime} WHERE id = #{id}")
-    int update(PlayerItemEntity entity);
+    @Update("UPDATE player_item SET count = #{count}, expireTime = #{expireTime}, " +
+            "updateTime = #{updateTime} WHERE id = #{id}")
+    int update(PlayerItem entity);
     
     @Delete("DELETE FROM player_item WHERE id = #{id}")
     int delete(long id);
     
-    @Delete("DELETE FROM player_item WHERE user_id = #{userId} AND item_id = #{itemId} AND count <= 0")
+    @Delete("DELETE FROM player_item WHERE userId = #{userId} AND itemId = #{itemId} AND count <= 0")
     int deleteEmpty(@Param("userId") long userId, @Param("itemId") int itemId);
 }

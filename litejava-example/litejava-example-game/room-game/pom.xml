@@ -16,18 +16,11 @@
     <description>房间制游戏服务器 - 分布式架构 (方案B: 玩法服务器直连)</description>
 
     <modules>
-        <module>room-game-common</module>
+        <module>common</module>
         <module>account-server</module>
         <module>hall-server</module>
-        <module>robot-client</module>
-        <!-- 游戏服务器 -->
-        <module>game-doudizhu</module>
-        <module>game-gobang</module>
-        <module>game-moba</module>
-        <module>game-mahjong</module>
-        <module>game-texas</module>
-        <module>game-niuniu</module>
-        <module>game-werewolf</module>
+        <module>robot</module>
+        <module>games-java</module>
     </modules>
 
     <dependencyManagement>
@@ -40,6 +33,11 @@
             <dependency>
                 <groupId>litejava</groupId>
                 <artifactId>room-game-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>litejava</groupId>
+                <artifactId>game-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <!-- Optional dependencies from litejava-plugins -->

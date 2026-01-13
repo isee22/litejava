@@ -1,0 +1,14 @@
+{
+  "name": "game-core-node",
+  "version": "1.0.0",
+  "description": "游戏服务器核心模块 (Node.js)",
+  "main": "index.js",
+  "files": [
+    "lib/**/*",
+    "index.js"
+  ],
+  "dependencies": {
+    "ws": "^8.16.0",
+    "js-yaml": "^4.1.0"
+  }
+}

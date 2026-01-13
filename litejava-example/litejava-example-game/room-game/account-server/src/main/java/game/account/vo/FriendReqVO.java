@@ -8,3 +8,4 @@ public class FriendReqVO {
     public long toId;
     public String message;
 }
+

@@ -7,3 +7,4 @@ public class UseItemReqVO {
     public long userId;
     public int itemId;
 }
+

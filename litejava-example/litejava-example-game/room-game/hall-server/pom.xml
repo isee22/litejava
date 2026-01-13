@@ -16,11 +16,23 @@
     <description>大厅服务器 - 房间操作/匹配队列 (独立服务)</description>
     
     <dependencies>
-        <!-- 只依赖 litejava-plugins，不依赖 room-game-common -->
+        <!-- LiteJava 框架 -->
         <dependency>
             <groupId>litejava</groupId>
             <artifactId>litejava-plugins</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <!-- 公共模块 -->
+        <dependency>
+            <groupId>litejava</groupId>
+            <artifactId>room-game-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Redis (集群模式) -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
         </dependency>
     </dependencies>
 </project>

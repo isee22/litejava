@@ -9,3 +9,4 @@ public class UserInfoVO {
     public int gems;
     public String headimg;
 }
+
