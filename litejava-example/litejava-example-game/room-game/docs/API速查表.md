@@ -15,11 +15,16 @@
 
 | 接口 | 方法 | 参数 | 响应 | 说明 |
 |------|------|------|------|------|
-| `/quick_start` | GET | `userId, gameType, level, name` | `{roomId, ip, port, token}` | 快速开始（推荐） |
-| `/match/start` | POST | `{userId, gameType, level, name}` | `{status, roomId?, ip?, port?, token?}` | 开始匹配 |
-| `/match/cancel` | POST | `{userId}` | `{}` | 取消匹配 |
-| `/create_private_room` | GET | `userId, gameType, conf` | `{roomId, ip, port, token}` | 创建私人房间 |
-| `/enter_private_room` | GET | `userId, roomid, name` | `{roomId, ip, port, token}` | 加入私人房间 |
+| `/quick_start` | POST | `{userId, gameType, roomLevel}` | `{roomId, token, time, sign, wsUrl}` | 快速开始（推荐，按等级匹配） |
+| `/create_room` | POST | `{userId, gameType}` | `{roomId, token, time, sign, wsUrl}` | 创建房间 |
+| `/enter_room` | POST | `{userId, roomId}` | `{roomId, token, time, sign, wsUrl}` | 加入房间 |
+| `/reconnect` | POST | `{userId}` | `{roomId, wsUrl, gameType, reconnect: true}` | 断线重连 |
+| `/get_user_room` | POST | `{userId}` | `{roomId, wsUrl, gameType}` | 获取用户当前房间 |
+| `/room_list` | POST | `{gameType, limit}` | `[{roomId, playerCount, maxPlayers}]` | 可加入房间列表 |
+
+**参数说明：**
+- `roomLevel`: 房间等级 (0=初级, 1=中级, 2=高级)，用于快速开始时的等级匹配
+- 用户信息（name等）由服务端从 Redis 缓存读取，客户端无需传递
 
 ### GameServer (9101+)
 
@@ -128,16 +133,19 @@
 ### 完整流程（快速开始）
 
 ```javascript
-// 1. 登录
+// 1. 登录 AccountServer
 POST /auth/login {username, password}
 → {userId, name, coins}
+// AccountServer 将用户信息缓存到 Redis: player:{userId}
 
-// 2. 快速开始
-GET /quick_start?userId=xxx&gameType=doudizhu&level=1&name=xxx
-→ {roomId, ip, port, token}
+// 2. 快速开始（按等级匹配）
+POST /quick_start {userId: xxx, gameType: "doudizhu", roomLevel: 1}
+→ {roomId, token, time, sign, wsUrl}
+// HallServer 从 Redis 读取用户信息，无需客户端传递
+// roomLevel: 0=初级, 1=中级, 2=高级
 
 // 3. WebSocket 连接
-ws://ip:port/game
+ws://wsUrl
 
 // 4. 登录房间
 → {cmd: 1, data: {token}}
@@ -161,20 +169,22 @@ ws://ip:port/game
 ### 断线重连流程
 
 ```javascript
-// 1. 检查断线信息
-GET /reconnect_info?userId=xxx
-→ {hasRoom: true, serverId, roomId, gameType, ip, port}
+// 1. 登录时检查是否在房间中
+POST /auth/login {username, password}
+→ {userId, name, coins, roomId: "123456"}  // roomId 不为空表示需要重连
 
-// 2. 重新获取 token
-GET /enter_private_room?userId=xxx&roomid=xxx&name=xxx
-→ {roomId, ip, port, token}
+// 2. 重新进入房间
+POST /enter_room {userId: xxx, roomId: "123456"}
+→ {roomId, token, time, sign, wsUrl}
+// 服务端从 Redis 读取用户信息
 
 // 3. WebSocket 连接
-ws://ip:port/game
+ws://wsUrl
 
 // 4. 登录房间（自动恢复游戏状态）
 → {cmd: 1, data: {token}}
 ← {cmd: 1, code: 0, data: {roomId, seatIndex, seats, game: {...}}}
+// game 对象包含完整游戏状态（牌、地主、底牌等）
 ```
 
 ### 心跳机制

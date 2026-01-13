@@ -43,6 +43,11 @@ public class CacheKeys {
     
     // ==================== 用户状态 ====================
     
+    /** 玩家信息 (AccountServer 缓存): player:{userId} -> Player JSON */
+    public static String player(long userId) {
+        return "player:" + userId;
+    }
+    
     /** 用户当前房间: hall:user:{userId} -> roomId */
     public static String user(long userId) {
         return "hall:user:" + userId;
@@ -55,9 +60,9 @@ public class CacheKeys {
     
     // ==================== 快速开始 ====================
     
-    /** 可加入的房间 (单个): hall:avail:{gameType} -> roomId */
-    public static String available(String gameType) {
-        return "hall:avail:" + gameType;
+    /** 可加入的房间 (按级别): hall:avail:{gameType}:{roomLevel} -> roomId */
+    public static String available(String gameType, int roomLevel) {
+        return "hall:avail:" + gameType + ":" + roomLevel;
     }
     
     // ==================== 匹配队列 ====================

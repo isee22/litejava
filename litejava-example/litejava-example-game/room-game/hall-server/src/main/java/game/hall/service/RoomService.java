@@ -7,6 +7,7 @@ import game.hall.cache.CacheKeys;
 import game.hall.model.ServerInfo;
 import game.hall.util.HttpUtil;
 import game.hall.util.SignUtil;
+import game.hall.vo.PlayerInfo;
 import game.hall.vo.RoomInfoVO;
 import game.hall.vo.RoomResultVO;
 import litejava.App;
@@ -26,26 +27,28 @@ public class RoomService {
     public RedisCachePlugin cache = G.cache;
     public ServerRegistry registry = G.registry;
     
-    public RoomResultVO quickStart(long userId, String name, String gameType, String conf) {
+    public RoomResultVO quickStart(long userId, String gameType, int roomLevel) {
         RoomResultVO existing = checkAndReconnect(userId);
         if (existing != null) return existing;
         
-        return cache.withLock(CacheKeys.lockQuickStart(gameType), CacheKeys.LOCK_EXPIRE, () -> {
-            RoomResultVO result = tryJoinAvailable(userId, name, gameType);
+        String lockKey = CacheKeys.lockQuickStart(gameType) + ":" + roomLevel;
+        
+        return cache.withLock(lockKey, CacheKeys.LOCK_EXPIRE, () -> {
+            RoomResultVO result = tryJoinAvailable(userId, gameType, roomLevel);
             if (result != null) return result;
-            return doCreateRoom(userId, name, gameType, conf, true);
+            return doCreateRoom(userId, gameType, roomLevel, true);
         });
     }
     
-    public RoomResultVO createRoom(long userId, String name, String gameType, String conf) {
+    public RoomResultVO createRoom(long userId, String gameType) {
         String existingRoom = cache.get(CacheKeys.user(userId));
         if (existingRoom != null) {
             GameException.error(ErrCode.ROOM_ALREADY_IN, "user is playing in room now");
         }
-        return doCreateRoom(userId, name, gameType, conf, false);
+        return doCreateRoom(userId, gameType, 0, false);
     }
     
-    public RoomResultVO joinRoom(long userId, String name, String roomId) {
+    public RoomResultVO joinRoom(long userId, String roomId) {
         if (roomId == null || roomId.isEmpty()) {
             GameException.error(ErrCode.INVALID_ACTION, "roomId is required");
         }
@@ -60,7 +63,7 @@ public class RoomService {
             GameException.error(ErrCode.ROOM_NOT_FOUND, "server offline");
         }
         
-        Map<String, Object> result = callEnterRoom(userId, name, roomId, server);
+        Map<String, Object> result = callEnterRoom(userId, roomId, server);
         if (result == null || SignUtil.toInt(result.get("errcode")) != 0) {
             int errcode = result != null ? SignUtil.toInt(result.get("errcode")) : ErrCode.UNKNOWN;
             String errmsg = result != null ? (String) result.get("errmsg") : "enter room failed";
@@ -130,6 +133,7 @@ public class RoomService {
         if (roomInfo != null) {
             cache.srem(CacheKeys.serverRooms(roomInfo.serverId), roomId);
             cache.srem(CacheKeys.joinableRooms(roomInfo.gameType), roomId);
+            cache.del(CacheKeys.available(roomInfo.gameType, roomInfo.roomLevel));
         }
         
         Set<String> userIds = cache.smembers(CacheKeys.roomUsers(roomId));
@@ -141,7 +145,6 @@ public class RoomService {
         
         cache.del(CacheKeys.room(roomId));
         cache.del(CacheKeys.roomUsers(roomId));
-        cache.del(CacheKeys.available(roomInfo != null ? roomInfo.gameType : "default"));
         
         app.log.info("房间销毁: " + roomId);
     }
@@ -162,6 +165,17 @@ public class RoomService {
     }
 
     // ==================== 私有方法 ====================
+    
+    /**
+     * 获取用户名称（从 Redis 缓存读取）
+     */
+    private String getUserName(long userId) {
+        PlayerInfo player = cache.get(CacheKeys.player(userId), PlayerInfo.class);
+        if (player != null && player.name != null) {
+            return player.name;
+        }
+        return "玩家" + userId;
+    }
     
     private RoomResultVO checkAndReconnect(long userId) {
         String roomId = cache.get(CacheKeys.user(userId));
@@ -189,25 +203,25 @@ public class RoomService {
         return vo;
     }
     
-    private RoomResultVO tryJoinAvailable(long userId, String name, String gameType) {
-        String roomId = cache.get(CacheKeys.available(gameType));
+    private RoomResultVO tryJoinAvailable(long userId, String gameType, int roomLevel) {
+        String roomId = cache.get(CacheKeys.available(gameType, roomLevel));
         if (roomId == null) return null;
         
         RoomInfoVO roomInfo = getRoomInfo(roomId);
         if (roomInfo == null) {
-            cache.del(CacheKeys.available(gameType));
+            cache.del(CacheKeys.available(gameType, roomLevel));
             return null;
         }
         
         ServerInfo server = registry.get(roomInfo.serverId);
         if (server == null || !isRoomRunning(roomId, server)) {
-            cache.del(CacheKeys.available(gameType));
+            cache.del(CacheKeys.available(gameType, roomLevel));
             return null;
         }
         
-        Map<String, Object> result = callEnterRoom(userId, name, roomId, server);
+        Map<String, Object> result = callEnterRoom(userId, roomId, server);
         if (result == null || SignUtil.toInt(result.get("errcode")) != 0) {
-            cache.del(CacheKeys.available(gameType));
+            cache.del(CacheKeys.available(gameType, roomLevel));
             return null;
         }
         
@@ -215,12 +229,13 @@ public class RoomService {
         return buildResult(roomId, server, String.valueOf(result.get("token")));
     }
     
-    private RoomResultVO doCreateRoom(long userId, String name, String gameType, String conf, boolean markAvailable) {
+    private RoomResultVO doCreateRoom(long userId, String gameType, int roomLevel, boolean markAvailable) {
         ServerInfo server = registry.choose(gameType);
         if (server == null) {
             GameException.error(ErrCode.NO_SERVER, "no available server for " + gameType);
         }
         
+        String conf = "{}";
         Map<String, Object> createResult = callCreateRoom(userId, conf, server);
         if (createResult == null || SignUtil.toInt(createResult.get("errcode")) != 0) {
             int errcode = createResult != null ? SignUtil.toInt(createResult.get("errcode")) : ErrCode.UNKNOWN;
@@ -236,6 +251,7 @@ public class RoomService {
         roomInfo.roomId = roomId;
         roomInfo.serverId = server.id;
         roomInfo.gameType = gameType;
+        roomInfo.roomLevel = roomLevel;
         roomInfo.ownerId = userId;
         roomInfo.playerCount = 0;
         roomInfo.maxPlayers = maxPlayers;
@@ -245,7 +261,7 @@ public class RoomService {
         
         cache.sadd(CacheKeys.serverRooms(server.id), roomId);
         
-        Map<String, Object> enterResult = callEnterRoom(userId, name, roomId, server);
+        Map<String, Object> enterResult = callEnterRoom(userId, roomId, server);
         if (enterResult == null || SignUtil.toInt(enterResult.get("errcode")) != 0) {
             GameException.error(ErrCode.UNKNOWN, "enter room failed");
         }
@@ -253,7 +269,7 @@ public class RoomService {
         recordUserRoom(userId, roomId);
         
         if (markAvailable) {
-            cache.set(CacheKeys.available(gameType), roomId, CacheKeys.ROOM_EXPIRE);
+            cache.set(CacheKeys.available(gameType, roomLevel), roomId, CacheKeys.ROOM_EXPIRE);
             cache.sadd(CacheKeys.joinableRooms(gameType), roomId);
         }
         
@@ -295,7 +311,8 @@ public class RoomService {
         return app.json.parseMap(resp);
     }
     
-    private Map<String, Object> callEnterRoom(long userId, String name, String roomId, ServerInfo server) {
+    private Map<String, Object> callEnterRoom(long userId, String roomId, ServerInfo server) {
+        String name = getUserName(userId);
         String url = "http://" + server.ip + ":" + server.httpPort + "/enter_room"
             + "?userid=" + userId + "&name=" + HttpUtil.encode(name) + "&roomid=" + roomId 
             + "&sign=" + SignUtil.sign(userId, name, roomId);

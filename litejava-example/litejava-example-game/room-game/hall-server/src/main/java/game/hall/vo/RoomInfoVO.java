@@ -8,6 +8,7 @@ public class RoomInfoVO {
     public String roomId;
     public String serverId;
     public String gameType;
+    public int roomLevel;      // 房间级别 (用于匹配同级别玩家)
     public long ownerId;
     public int playerCount;
     public int maxPlayers;

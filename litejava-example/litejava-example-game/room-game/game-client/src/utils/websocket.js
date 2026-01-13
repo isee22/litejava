@@ -202,24 +202,24 @@ export const hallApi = {
    * 快速开始 (有房间就加入，没房间就创建)
    * @returns {Promise<{roomId, token, wsUrl}>}
    */
-  async quickStart(userId, gameType, conf) {
-    return httpPost(`${API_CONFIG.hallServer}/quick_start`, { userId, gameType, conf })
+  async quickStart(userId, gameType, roomLevel) {
+    return httpPost(`${API_CONFIG.hallServer}/quick_start`, { userId, gameType, roomLevel })
   },
   
   /**
    * 创建房间
    * @returns {Promise<{roomId, token, wsUrl}>}
    */
-  async createRoom(userId, gameType, conf) {
-    return httpPost(`${API_CONFIG.hallServer}/create_room`, { userId, gameType, conf })
+  async createRoom(userId, gameType) {
+    return httpPost(`${API_CONFIG.hallServer}/create_room`, { userId, gameType })
   },
   
   /**
    * 加入房间
    * @returns {Promise<{roomId, token, time, sign, wsUrl}>}
    */
-  async enterRoom(userId, roomId, name) {
-    return httpPost(`${API_CONFIG.hallServer}/enter_room`, { userId, roomId, name })
+  async enterRoom(userId, roomId) {
+    return httpPost(`${API_CONFIG.hallServer}/enter_room`, { userId, roomId })
   },
   
   /**

@@ -201,7 +201,7 @@ async function quickStartLevel(level) {
     const result = await hallApi.quickStart(
       userStore.playerId,
       selectedGame.value,
-      { maxPlayers: level.maxPlayers || 4, roomLevel: level.roomLevel }
+      level.roomLevel
     )
     
     if (result.code !== 0) {
@@ -232,8 +232,7 @@ async function createFriendRoom() {
   try {
     const result = await hallApi.createRoom(
       userStore.playerId,
-      selectedGame.value,
-      { maxPlayers: 4 }
+      selectedGame.value
     )
     
     if (result.code !== 0) {
@@ -310,8 +309,7 @@ async function confirmRoomId() {
   try {
     const result = await hallApi.enterRoom(
       userStore.playerId,
-      roomId,
-      userStore.playerName
+      roomId
     )
     
     if (result.code !== 0) {

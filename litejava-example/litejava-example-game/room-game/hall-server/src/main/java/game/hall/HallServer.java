@@ -104,10 +104,9 @@ public class HallServer {
             Map<String, Object> req = ctx.bindJSON();
             long userId = toLong(req.get("userId"));
             String gameType = (String) req.getOrDefault("gameType", "doudizhu");
-            String conf = req.get("conf") != null ? app.json.stringify(req.get("conf")) : "{}";
-            String name = (String) req.getOrDefault("name", "玩家" + userId);
+            int roomLevel = toInt(req.getOrDefault("roomLevel", 0));
             
-            RoomResultVO result = G.roomService.quickStart(userId, name, gameType, conf);
+            RoomResultVO result = G.roomService.quickStart(userId, gameType, roomLevel);
             ctx.ok(result);
         });
         
@@ -115,10 +114,8 @@ public class HallServer {
             Map<String, Object> req = ctx.bindJSON();
             long userId = toLong(req.get("userId"));
             String gameType = (String) req.getOrDefault("gameType", "doudizhu");
-            String conf = req.get("conf") != null ? app.json.stringify(req.get("conf")) : "{}";
-            String name = (String) req.getOrDefault("name", "玩家" + userId);
             
-            RoomResultVO result = G.roomService.createRoom(userId, name, gameType, conf);
+            RoomResultVO result = G.roomService.createRoom(userId, gameType);
             ctx.ok(result);
         });
         
@@ -126,9 +123,8 @@ public class HallServer {
             Map<String, Object> req = ctx.bindJSON();
             long userId = toLong(req.get("userId"));
             String roomId = req.get("roomId") != null ? String.valueOf(req.get("roomId")) : null;
-            String name = (String) req.getOrDefault("name", "玩家" + userId);
             
-            RoomResultVO result = G.roomService.joinRoom(userId, name, roomId);
+            RoomResultVO result = G.roomService.joinRoom(userId, roomId);
             ctx.ok(result);
         });
         

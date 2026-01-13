@@ -109,6 +109,73 @@ cd games-node/game-doudizhu4 && npm install && npm start
 
 ## 完整游戏流程
 
+### 1. 登录流程
+```
+客户端 ──► AccountServer: POST /login {username, password}
+       ◄── {userId, name, roomId?, roomConfigs, items}
+```
+- 返回用户信息，包含 `roomId` 用于断线重连
+- `roomConfigs`: 房间级别配置（初级场/中级场/高级场）
+- `items`: 玩家道具列表（房卡等）
+- AccountServer 将用户信息缓存到 Redis: `player:{userId}`
+
+### 2. 快速开始流程（推荐）
+```
+客户端 ──► HallServer: POST /quick_start {userId, gameType, roomLevel}
+       │
+       ├─► HallServer 从 Redis 读取用户信息: player:{userId}
+       ├─► 查找可用房间: hall:avail:{gameType}:{roomLevel}
+       │   ├─ 有可用房间 → 加入
+       │   └─ 无可用房间 → 创建新房间
+       │
+       ◄── {roomId, token, time, sign, wsUrl}
+```
+- `roomLevel`: 房间级别（0=初级, 1=中级, 2=高级）
+- 同级别玩家匹配到同一房间
+- 用户名由服务端从 Redis 获取，客户端无需传递
+
+### 3. 创建/加入房间流程
+```
+客户端 ──► HallServer: POST /create_room {userId, gameType}
+       或: POST /enter_room {userId, roomId}
+       │
+       ├─► HallServer 从 Redis 读取用户信息
+       ├─► 选择 GameServer (负载均衡)
+       ├─► 调用 GameServer HTTP 接口
+       │
+       ◄── {roomId, token, time, sign, wsUrl}
+```
+
+### 4. WebSocket 游戏流程
+```
+客户端 ──► GameServer: WebSocket ws://ip:port/game
+       ──► LOGIN {token, roomid, time, sign}
+       │
+       ├─► GameServer 验证签名和 token
+       ├─► 玩家进入房间
+       │
+       ◄── LOGIN 响应 {seats, game?}
+       │   - seats: 座位信息（包含玩家昵称）
+       │   - game: 游戏状态（断线重连时恢复）
+       │
+       ◄──► 游戏操作 (READY/BID/PLAY...)
+```
+
+### 5. 数据流转
+```
+┌──────────────┐     Redis 缓存      ┌──────────────┐
+│ AccountServer│ ──► player:{userId} ──► │  HallServer  │
+│   (登录)     │     {name, coins...}    │  (读取信息)  │
+└──────────────┘                         └──────┬───────┘
+                                               │
+                                               ▼
+                                        ┌──────────────┐
+                                        │  GameServer  │
+                                        │  (游戏逻辑)  │
+                                        └──────────────┘
+```
+
+### 完整时序图
 ```
 ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌─────────┐
 │  客户端  │      │ Account │      │  Hall   │      │  Game   │
@@ -116,25 +183,27 @@ cd games-node/game-doudizhu4 && npm install && npm start
      │                │                │                │
      │ 1. POST /login │                │                │
      │───────────────►│                │                │
-     │   {userId, roomId?}             │                │  ← roomId 用于断线重连
+     │   {userId, name, roomId?, ...}  │                │
      │◄───────────────│                │                │
+     │                │ Redis: player:{userId}          │
+     │                │───────────────►│                │
      │                │                │                │
-     │ 2. POST /create_room 或 /enter_room             │
+     │ 2. POST /quick_start {userId, gameType, roomLevel}
      │────────────────────────────────►│                │
-     │                │                │ 3. 选择服务器   │
-     │                │                │ 4. 调用 GameServer
+     │                │                │ 读取 player:{userId}
+     │                │                │ 匹配/创建房间   │
      │                │                │───────────────►│
-     │   {roomId, ip, port, token, time, sign}         │  ← 带签名
+     │   {roomId, token, time, sign, wsUrl}            │
      │◄────────────────────────────────│                │
      │                │                │                │
-     │ 5. WebSocket ws://ip:port/game  │                │
+     │ 3. WebSocket ws://ip:port/game  │                │
      │─────────────────────────────────────────────────►│
-     │ 6. LOGIN {token, roomid, time, sign}            │  ← 带签名
+     │ 4. LOGIN {token, roomid, time, sign}            │
      │─────────────────────────────────────────────────►│
-     │   验证签名 + token，进入房间     │                │
+     │   验证签名，返回房间状态（含玩家昵称）            │
      │◄─────────────────────────────────────────────────│
      │                │                │                │
-     │ 7. 游戏操作 (READY/BID/PLAY...) │                │
+     │ 5. 游戏操作 (READY/BID/PLAY...) │                │
      │◄────────────────────────────────────────────────►│
 ```
 

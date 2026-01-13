@@ -114,12 +114,12 @@ public class MatchService {
         MatchUserVO first = players.get(0);
         
         try {
-            RoomResultVO room = roomService.createRoom(first.userId, first.name, gameType, first.conf);
+            RoomResultVO room = roomService.createRoom(first.userId, gameType);
             
             for (int i = 1; i < players.size(); i++) {
                 MatchUserVO player = players.get(i);
                 try {
-                    roomService.joinRoom(player.userId, player.name, room.roomId);
+                    roomService.joinRoom(player.userId, room.roomId);
                 } catch (Exception e) {
                     app.log.warn("匹配玩家加入失败: userId=" + player.userId + ", " + e.getMessage());
                 }

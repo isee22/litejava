@@ -56,13 +56,17 @@ redis:
 ```
 AccountServer                    Redis                      HallServer
      │                            │                            │
+     │ 登录时缓存用户信息          │                            │
+     │ ─────────────────────────► │                            │
+     │  player:{userId} = {name, coins, ...}                   │
+     │                            │                            │
      │ 启动时同步配置              │                            │
      │ ─────────────────────────► │                            │
      │  hall:config:doudizhu:normal = 3                        │
      │  hall:config:mahjong:normal = 4                         │
      │                            │                            │
      │                            │ ◄───────────────────────── │
-     │                            │   读取配置                  │
+     │                            │   读取用户信息/配置         │
      │                            │                            │
      │                            │ ◄───────────────────────── │
      │                            │   存储匹配队列/房间状态     │
@@ -98,54 +102,104 @@ HallServer 记录服务器信息
 
 ### 3. 匹配系统
 
+#### 快速开始（休闲游戏）
 ```
-玩家 A ──► /match/start ──► 加入队列 "doudizhu:normal"
-玩家 B ──► /match/start ──► 加入队列 "doudizhu:normal"
-玩家 C ──► /match/start ──► 加入队列 "doudizhu:normal"
-                                    │
-                                    ▼ 人数足够 (3人)
-                              创建房间，返回 token
+玩家 A ──► /quick_start {roomLevel: 1} ──► 查找可用房间 "doudizhu:1"
+                                              │
+                                              ├─ 有可用房间 ──► 加入房间
+                                              │
+                                              └─ 无可用房间 ──► 创建新房间
+                                                                    │
+                                                                    ▼
+                                                              返回 token + wsUrl
 ```
 
-队列配置从 AccountServer `/room/config` 动态获取。
+**等级匹配规则：**
+- `roomLevel`: 0=初级, 1=中级, 2=高级
+- 优先匹配相同等级的可用房间
+- 缓存 key: `available:{gameType}:{roomLevel}`
+
+#### 竞技匹配（MOBA 类游戏）
+```
+玩家 A ──► /match/start ──► 加入队列 "moba:normal"
+玩家 B ──► /match/start ──► 加入队列 "moba:normal"
+...
+玩家 J ──► /match/start ──► 加入队列 "moba:normal"
+                                    │
+                                    ▼ 人数足够 (10人)
+                              匹配相近实力玩家，创建房间
+```
+
+**匹配规则：**
+- 根据玩家等级/段位匹配相近对手
+- 等待足够人数后统一创建房间
+- 队列配置从 AccountServer `/room/config` 动态获取
 
 ## API 接口
 
-### 创建私人房间
+### 快速开始（推荐，按等级匹配）
 ```http
-GET /create_private_room?userId=10001&gameType=doudizhu&conf={}
+POST /quick_start
+Content-Type: application/json
+
+{
+  "userId": 10001,
+  "gameType": "doudizhu",
+  "roomLevel": 1
+}
 
 Response:
 {
   "code": 0,
   "data": {
-    "roomid": "123456",
-    "ip": "192.168.1.100",
-    "port": 9100,
+    "roomId": "123456",
     "token": "xxx",
     "time": 1234567890,
-    "sign": "md5签名"
+    "sign": "md5签名",
+    "wsUrl": "ws://192.168.1.100:9100/game"
   }
 }
 ```
 
-### 加入私人房间
+**参数说明：**
+- `roomLevel`: 0=初级, 1=中级, 2=高级
+- 用户信息（name等）由服务端从 Redis 读取，无需客户端传递
+
+### 创建房间
 ```http
-GET /enter_private_room?userId=10002&roomId=123456&name=玩家2
+POST /create_room
+Content-Type: application/json
+
+{
+  "userId": 10001,
+  "gameType": "doudizhu"
+}
 
 Response: (同上)
 ```
 
-### 开始匹配
+### 加入房间
+```http
+POST /enter_room
+Content-Type: application/json
+
+{
+  "userId": 10002,
+  "roomId": "123456"
+}
+
+Response: (同上)
+```
+
+### 开始匹配（用于 MOBA 类游戏，匹配相近对手）
 ```http
 POST /match/start
 Content-Type: application/json
 
 {
   "userId": 10001,
-  "gameType": "doudizhu",
-  "level": "normal",
-  "name": "玩家名"
+  "gameType": "moba",
+  "level": "normal"
 }
 
 Response (匹配成功):
@@ -153,10 +207,9 @@ Response (匹配成功):
   "code": 0,
   "data": {
     "status": "matched",
-    "roomid": "234567",
-    "ip": "192.168.1.100",
-    "port": 9100,
-    "token": "xxx"
+    "roomId": "234567",
+    "token": "xxx",
+    "wsUrl": "ws://192.168.1.100:9100/game"
   }
 }
 
@@ -166,6 +219,11 @@ Response (等待中):
   "data": {"status": "matching"}
 }
 ```
+
+**说明：**
+- `/match/start` 用于需要匹配相近实力对手的游戏（如 MOBA、竞技类）
+- `/quick_start` 用于快速开始的休闲游戏（如斗地主、麻将）
+- 两者是不同的匹配策略，不是替代关系
 
 ### 取消匹配
 ```http
