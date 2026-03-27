@@ -47,9 +47,112 @@ mvn package -DskipTests
 - No annotations for configuration
 - All framework exceptions extend `LiteJavaException`
 
+## Exception Handling
+
+### LiteJavaException 设计说明
+
+框架异常包含两个 code：
+- `statusCode`: HTTP 状态码 (200, 400, 404, 500) - 给浏览器/网关看
+- `code`: 业务错误码 (40001, 41001) - 给前端业务逻辑看
+
+### 使用规范
+
+```java
+// ✅ 业务异常 - HTTP 200 + 业务错误码
+throw LiteJavaException.biz(Err.USER_NOT_FOUND, "用户不存在");
+// 响应: HTTP 200, {code: 41001, msg: "用户不存在"}
+
+// ✅ HTTP 异常 - 使用静态工厂方法
+throw LiteJavaException.badRequest("参数错误");
+throw LiteJavaException.notFound("资源不存在");
+throw LiteJavaException.unauthorized("未登录");
+// 响应: HTTP 404, {code: 404, msg: "资源不存在"}
+
+// ❌ 不要直接用构造函数（容易混淆参数）
+throw new LiteJavaException("错误", 404, 41001);  // statusCode 和 code 容易搞反
+```
+
+### RecoveryPlugin 错误处理
+
+RecoveryPlugin 支持两种模式：
+
+#### 1. JSON 模式（默认，适合 API）
+```java
+// 默认返回 JSON
+app.use(new RecoveryPlugin());
+
+// 响应: {code: 500, msg: "错误消息", data: null}
+```
+
+#### 2. 错误页面模式（适合传统 Web 应用）
+
+**前提条件**：必须先安装模板引擎插件（ThymeleafPlugin 或 FreemarkerPlugin）
+
+```java
+// 1. 安装模板引擎
+app.use(new ThymeleafPlugin());
+
+// 2. 配置错误页面
+RecoveryPlugin recovery = new RecoveryPlugin();
+recovery.errorPageEnabled = true;
+recovery.errorPages.put(404, "error/404");  // 404 错误页
+recovery.errorPages.put(500, "error/500");  // 500 错误页
+app.use(recovery);
+
+// 3. 创建错误页面模板
+// templates/error/404.html
+// templates/error/500.html
+```
+
+**配置文件方式**：
+```yaml
+# application.yml
+recovery:
+  errorPageEnabled: true
+  errorPage:
+    404: error/404
+    500: error/500
+```
+
+**自动判断**：RecoveryPlugin 会根据请求的 `Accept` 头自动选择：
+- `Accept: application/json` → 返回 JSON
+- `Accept: text/html` → 渲染错误页面（需要模板引擎）
+
+**注意**：如果启用 `errorPageEnabled` 但没有配置模板引擎，会记录错误日志并降级为 JSON 响应。
+
+### 业务错误码规范
+
+每个项目应定义 `Err.java` 常量类：
+
+```java
+public class Err {
+    // 5位数字：XXYYY
+    // XX: 模块编号 (40=通用, 41=用户, 42=订单...)
+    // YYY: 具体错误 (001-999)
+    
+    public static final int PARAM_REQUIRED = 40001;
+    public static final int PARAM_INVALID = 40002;
+    public static final int USER_NOT_FOUND = 41001;
+    public static final int ORDER_NOT_FOUND = 42001;
+}
+```
+
 ## Coding Rules
 
-### 1. Return 语句后不写代码
+### 1. 统一使用 LiteJavaException 静态方法
+```java
+// ❌ 错误 - 直接用构造函数容易混淆
+throw new LiteJavaException("错误", 404, 41001);
+
+// ✅ 正确 - 业务异常
+throw LiteJavaException.biz(Err.USER_NOT_FOUND, "用户不存在");
+
+// ✅ 正确 - HTTP 异常
+throw LiteJavaException.notFound("资源不存在");
+throw LiteJavaException.badRequest("参数错误");
+```
+
+### 2. Return 语句后不写代码
 ```java
 // ❌ 错误
 if (user == null) {

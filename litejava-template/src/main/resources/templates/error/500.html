@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - 服务器错误</title>
+    <link rel="stylesheet" th:href="@{/static/css/style.css}">
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <a href="/" class="logo">LiteJava</a>
+            <div>
+                <a href="/">首页</a>
+                <a href="/users">用户管理</a>
+                <a href="/about">关于</a>
+            </div>
+        </div>
+    </nav>
+    
+    <main>
+        <div class="container">
+            <div class="error-page">
+                <h1>500</h1>
+                <p th:text="${message} ?: '服务器内部错误'">服务器内部错误</p>
+                <p class="error-detail">抱歉，服务器遇到了一些问题，请稍后再试。</p>
+                
+                <!-- 开发模式显示堆栈 -->
+                <div th:if="${stack}" class="error-stack">
+                    <h3>错误详情</h3>
+                    <pre th:text="${stack}"></pre>
+                </div>
+                
+                <a href="/" class="btn btn-primary">返回首页</a>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>Powered by LiteJava</p>
+        </div>
+    </footer>
+    
+    <style>
+        .error-page {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .error-page h1 {
+            font-size: 120px;
+            color: #e74c3c;
+            margin: 0;
+        }
+        .error-page p {
+            font-size: 20px;
+            color: #666;
+            margin: 20px 0;
+        }
+        .error-detail {
+            font-size: 16px;
+            color: #999;
+        }
+        .error-stack {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 30px 0;
+            border-left: 4px solid #e74c3c;
+        }
+        .error-stack h3 {
+            margin-top: 0;
+            color: #e74c3c;
+        }
+        .error-stack pre {
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #333;
+        }
+    </style>
+</body>
+</html>
